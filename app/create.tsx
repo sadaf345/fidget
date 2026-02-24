@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Save, Trash2, Check, Heart, Zap } from 'lucide-react-native';
+import { ChevronLeft, Plus, Save, Trash2, Check, Heart } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
@@ -60,7 +60,18 @@ export default function CreateFidgetPage() {
 
   const handleClearAll = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-    clearAllWidgets();
+    Alert.alert(
+      'Clear All Widgets',
+      'Are you sure you want to wipe the board clean?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: () => clearAllWidgets(),
+        },
+      ]
+    );
   }, [clearAllWidgets]);
 
   const handleSavePrompt = useCallback(() => {
@@ -142,13 +153,6 @@ export default function CreateFidgetPage() {
           >
             <Save size={16} color={widgets.length === 0 ? theme.textMuted : theme.accent} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.hapticsLabHeaderBtn}
-            onPress={() => router.push('/haptics' as any)}
-            activeOpacity={0.7}
-          >
-            <Zap size={16} color="#F87171" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -222,7 +226,6 @@ export default function CreateFidgetPage() {
       <WidgetPicker
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
-        onOpenHapticsLab={() => router.push('/haptics' as any)}
       />
     </View>
   );
@@ -332,16 +335,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
     borderColor: theme.border,
     opacity: 0.5,
-  },
-  hapticsLabHeaderBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   namePanel: {
     paddingHorizontal: 16,

@@ -11,6 +11,11 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
   const queryClient = useQueryClient();
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState<boolean>(false);
+  const [undoStack, setUndoStack] = useState<WidgetConfig[][]>([]);
+
+  const pushUndo = useCallback((current: WidgetConfig[]) => {
+    setUndoStack(prev => [...prev.slice(-20), current]);
+  }, []);
 
   const widgetsQuery = useQuery({
     queryKey: ['widgets'],
@@ -42,19 +47,21 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
 
   const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.map(w => w.id === id ? { ...w, x, y } : w);
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const updateWidgetRotation = useCallback((id: string, rotation: number) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.map(w => w.id === id ? { ...w, rotation } : w);
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const addWidget = useCallback((type: WidgetType, options?: { hapticPower?: HapticPower }) => {
     const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -74,53 +81,76 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
       ...(options?.hapticPower ? { hapticPower: options.hapticPower } : {}),
     };
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = [...prev, newWidget];
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const updateWidgetHapticPower = useCallback((id: string, hapticPower: HapticPower) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.map(w => w.id === id ? { ...w, hapticPower } : w);
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const toggleWidgetLock = useCallback((id: string) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.map(w => w.id === id ? { ...w, locked: !w.locked } : w);
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const removeWidget = useCallback((id: string) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.filter(w => w.id !== id);
       saveMutation.mutate(updated);
       return updated;
     });
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const clearAllWidgets = useCallback(() => {
-    setWidgets([]);
+    setWidgets(prev => {
+      pushUndo(prev);
+      return [];
+    });
     saveMutation.mutate([]);
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const updateWidgetScale = useCallback((id: string, scale: number) => {
     setWidgets(prev => {
+      pushUndo(prev);
       const updated = prev.map(w => w.id === id ? { ...w, scale } : w);
       saveMutation.mutate(updated);
       return updated;
     });
+  }, [saveMutation, pushUndo]);
+
+  const undoLastChange = useCallback(() => {
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setWidgets(last);
+      saveMutation.mutate(last);
+      return prev.slice(0, -1);
+    });
   }, [saveMutation]);
 
+  const canUndo = undoStack.length > 0;
+
   const resetWidgets = useCallback(() => {
-    setWidgets(DEFAULT_WIDGETS);
+    setWidgets(prev => {
+      pushUndo(prev);
+      return DEFAULT_WIDGETS;
+    });
     saveMutation.mutate(DEFAULT_WIDGETS);
-  }, [saveMutation]);
+  }, [saveMutation, pushUndo]);
 
   const toggleEditMode = useCallback(() => {
     setEditMode(prev => !prev);
@@ -138,6 +168,8 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     removeWidget,
     clearAllWidgets,
     resetWidgets,
+    undoLastChange,
+    canUndo,
     toggleEditMode,
     toggleWidgetLock,
   };

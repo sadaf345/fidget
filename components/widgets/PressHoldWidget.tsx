@@ -22,12 +22,16 @@ export default function PressHoldWidget({ disabled, hapticPower = 'medium' }: Pr
   const triggerHaptic = useCallback(async () => {
     try {
       const power = hapticPowerRef.current;
-      if (power === 'light') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } else if (power === 'heavy') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      switch (power) {
+        case 'light': await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); break;
+        case 'heavy': await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); break;
+        case 'soft': await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft); break;
+        case 'rigid': await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); break;
+        case 'success': await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); break;
+        case 'warning': await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); break;
+        case 'error': await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); break;
+        case 'selection': await Haptics.selectionAsync(); break;
+        default: await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); break;
       }
     } catch (e) {
       console.log('Haptic not available:', e);

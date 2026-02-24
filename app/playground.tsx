@@ -8,10 +8,11 @@ import {
   LayoutChangeEvent,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Settings, RotateCcw, Check, ChevronLeft, Trash2 } from 'lucide-react-native';
+import { Plus, Settings, Undo2, Check, ChevronLeft, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useFidget } from '@/contexts/FidgetContext';
@@ -45,7 +46,7 @@ const GridPattern = React.memo(function GridPattern() {
 export default function PlaygroundCanvas() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { widgets, editMode, isLoading, toggleEditMode, resetWidgets, clearAllWidgets } = useFidget();
+  const { widgets, editMode, isLoading, toggleEditMode, undoLastChange, canUndo, clearAllWidgets } = useFidget();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -64,14 +65,26 @@ export default function PlaygroundCanvas() {
     setPickerVisible(true);
   }, []);
 
-  const handleReset = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-    resetWidgets();
-  }, [resetWidgets]);
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    undoLastChange();
+  }, [undoLastChange, canUndo]);
 
   const handleClearAll = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-    clearAllWidgets();
+    Alert.alert(
+      'Clear All Widgets',
+      'Are you sure you want to wipe the board clean?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: () => clearAllWidgets(),
+        },
+      ]
+    );
   }, [clearAllWidgets]);
 
   if (isLoading) {
@@ -111,11 +124,12 @@ export default function PlaygroundCanvas() {
                 <Trash2 size={16} color="#F87171" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.headerBtn}
-                onPress={handleReset}
+                style={[styles.headerBtn, !canUndo && styles.headerBtnDisabled]}
+                onPress={handleUndo}
                 activeOpacity={0.7}
+                disabled={!canUndo}
               >
-                <RotateCcw size={18} color={theme.textSecondary} />
+                <Undo2 size={18} color={canUndo ? theme.textSecondary : theme.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerBtnAccent}
@@ -287,6 +301,9 @@ const styles = StyleSheet.create({
   headerBtnActive: {
     backgroundColor: theme.accentGlow,
     borderColor: theme.accent,
+  },
+  headerBtnDisabled: {
+    opacity: 0.4,
   },
   headerBtnDanger: {
     width: 38,

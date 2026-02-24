@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
-import { X, Zap } from 'lucide-react-native';
+import { X, Volume2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useFidget } from '@/contexts/FidgetContext';
@@ -17,7 +17,6 @@ import { WidgetType, HapticPower } from '@/types/fidget';
 interface WidgetPickerProps {
   visible: boolean;
   onClose: () => void;
-  onOpenHapticsLab?: () => void;
 }
 
 const WIDGET_SYMBOLS: Record<string, string> = {
@@ -27,13 +26,33 @@ const WIDGET_SYMBOLS: Record<string, string> = {
   Move: '✥',
 };
 
-const POWER_OPTIONS: { value: HapticPower; label: string; emoji: string }[] = [
-  { value: 'light', label: 'Light', emoji: '·' },
-  { value: 'medium', label: 'Medium', emoji: '••' },
-  { value: 'heavy', label: 'Heavy', emoji: '•••' },
+const HAPTIC_OPTIONS: { value: HapticPower; label: string; symbol: string; color: string; category: string }[] = [
+  { value: 'light', label: 'Light', symbol: '○', color: '#7DD3C0', category: 'Impact' },
+  { value: 'medium', label: 'Medium', symbol: '◎', color: '#4ECDC4', category: 'Impact' },
+  { value: 'heavy', label: 'Heavy', symbol: '⬡', color: '#2B9E96', category: 'Impact' },
+  { value: 'soft', label: 'Soft', symbol: '◇', color: '#F7B267', category: 'Impact' },
+  { value: 'rigid', label: 'Rigid', symbol: '◆', color: '#E8575A', category: 'Impact' },
+  { value: 'success', label: 'Success', symbol: '✓', color: '#4ADE80', category: 'Notification' },
+  { value: 'warning', label: 'Warning', symbol: '⚠', color: '#FBBF24', category: 'Notification' },
+  { value: 'error', label: 'Error', symbol: '✕', color: '#F87171', category: 'Notification' },
+  { value: 'selection', label: 'Selection', symbol: '⫶', color: '#A78BFA', category: 'Selection' },
 ];
 
-export default function WidgetPicker({ visible, onClose, onOpenHapticsLab }: WidgetPickerProps) {
+function triggerHapticForPower(power: HapticPower) {
+  switch (power) {
+    case 'light': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); break;
+    case 'medium': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); break;
+    case 'heavy': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}); break;
+    case 'soft': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => {}); break;
+    case 'rigid': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {}); break;
+    case 'success': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); break;
+    case 'warning': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); break;
+    case 'error': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); break;
+    case 'selection': Haptics.selectionAsync().catch(() => {}); break;
+  }
+}
+
+export default function WidgetPicker({ visible, onClose }: WidgetPickerProps) {
   const { addWidget } = useFidget();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -75,29 +94,27 @@ export default function WidgetPicker({ visible, onClose, onOpenHapticsLab }: Wid
     }
   }, [visible, slideAnim, backdropAnim]);
 
-  const handleAdd = (type: WidgetType) => {
+  const handleAdd = useCallback((type: WidgetType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSelectedType(type);
     setShowPowerPicker(true);
-  };
+  }, []);
 
-  const handleConfirmAdd = () => {
+  const handleConfirmAdd = useCallback(() => {
     if (!selectedType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addWidget(selectedType, { hapticPower: selectedPower });
     onClose();
-  };
+  }, [selectedType, selectedPower, addWidget, onClose]);
 
-  const handlePowerSelect = (power: HapticPower) => {
+  const handlePowerSelect = useCallback((power: HapticPower) => {
     setSelectedPower(power);
-    if (power === 'light') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    } else if (power === 'medium') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    }
-  };
+    triggerHapticForPower(power);
+  }, []);
+
+  const handleTestHaptic = useCallback(() => {
+    triggerHapticForPower(selectedPower);
+  }, [selectedPower]);
 
   if (!visible) return null;
 
@@ -154,53 +171,57 @@ export default function WidgetPicker({ visible, onClose, onOpenHapticsLab }: Wid
             ))}
           </ScrollView>
         ) : (
-          <View style={styles.powerSection}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.powerSection}
+          >
             <Text style={styles.powerHint}>
-              Choose how strong the haptic feedback feels
+              Choose how the haptic feedback feels
             </Text>
-            <View style={styles.powerOptions}>
-              {POWER_OPTIONS.map((opt) => (
+            <View style={styles.hapticGrid}>
+              {HAPTIC_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
                   style={[
-                    styles.powerOption,
-                    selectedPower === opt.value && styles.powerOptionActive,
+                    styles.hapticChip,
+                    selectedPower === opt.value && { borderColor: opt.color, backgroundColor: opt.color + '18' },
                   ]}
                   onPress={() => handlePowerSelect(opt.value)}
                   activeOpacity={0.7}
                 >
                   <Text style={[
-                    styles.powerEmoji,
-                    selectedPower === opt.value && styles.powerEmojiActive,
-                  ]}>{opt.emoji}</Text>
+                    styles.hapticSymbol,
+                    { color: selectedPower === opt.value ? opt.color : theme.textMuted },
+                  ]}>{opt.symbol}</Text>
                   <Text style={[
-                    styles.powerLabel,
-                    selectedPower === opt.value && styles.powerLabelActive,
+                    styles.hapticLabel,
+                    selectedPower === opt.value && { color: opt.color },
                   ]}>{opt.label}</Text>
+                  <Text style={[
+                    styles.hapticCategory,
+                    selectedPower === opt.value && { color: opt.color, opacity: 0.7 },
+                  ]}>{opt.category}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={handleConfirmAdd}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.confirmText}>Add Widget</Text>
-            </TouchableOpacity>
-            {onOpenHapticsLab && (
+            <View style={styles.actionRow}>
               <TouchableOpacity
-                style={styles.hapticsLabBtn}
-                onPress={() => {
-                  onClose();
-                  onOpenHapticsLab();
-                }}
+                style={styles.testButton}
+                onPress={handleTestHaptic}
                 activeOpacity={0.7}
               >
-                <Zap size={16} color="#F87171" />
-                <Text style={styles.hapticsLabText}>Try in Haptics Lab</Text>
+                <Volume2 size={16} color={theme.accent} />
+                <Text style={styles.testText}>Test</Text>
               </TouchableOpacity>
-            )}
-          </View>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleConfirmAdd}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.confirmText}>Add Widget</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         )}
       </Animated.View>
     </View>
@@ -226,7 +247,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    maxHeight: 480,
+    maxHeight: 520,
     borderTopWidth: 1,
     borderColor: theme.border,
   },
@@ -305,46 +326,66 @@ const styles = StyleSheet.create({
   powerHint: {
     fontSize: 14,
     color: theme.textSecondary,
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 20,
   },
-  powerOptions: {
+  hapticGrid: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
   },
-  powerOption: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+  hapticChip: {
+    width: '31%' as any,
+    flexGrow: 1,
+    flexBasis: '29%' as any,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     backgroundColor: theme.widgetBg,
     borderWidth: 1.5,
     borderColor: theme.widgetBorder,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
-  powerOptionActive: {
-    borderColor: theme.accent,
-    backgroundColor: theme.accentGlow,
-  },
-  powerEmoji: {
-    fontSize: 20,
+  hapticSymbol: {
+    fontSize: 18,
+    fontWeight: '600' as const,
     color: theme.textMuted,
-    fontWeight: '900' as const,
   },
-  powerEmojiActive: {
-    color: theme.accent,
-  },
-  powerLabel: {
-    fontSize: 13,
+  hapticLabel: {
+    fontSize: 12,
     fontWeight: '600' as const,
     color: theme.textSecondary,
   },
-  powerLabelActive: {
+  hapticCategory: {
+    fontSize: 10,
+    color: theme.textMuted,
+    opacity: 0.6,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.25)',
+  },
+  testText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
     color: theme.accent,
   },
   confirmButton: {
+    flex: 1,
     backgroundColor: theme.accent,
     paddingVertical: 14,
     borderRadius: 14,
@@ -354,22 +395,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: theme.bg,
-  },
-  hapticsLabBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    marginTop: 10,
-    borderRadius: 14,
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.25)',
-  },
-  hapticsLabText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#F87171',
   },
 });

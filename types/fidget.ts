@@ -1,6 +1,6 @@
 export type WidgetType = 'press-hold' | 'scroll-wheel' | 'horizontal-scroll' | 'swipe-pad';
 
-export type HapticPower = 'light' | 'medium' | 'heavy';
+export type HapticPower = 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' | 'success' | 'warning' | 'error' | 'selection';
 
 export interface WidgetConfig {
   id: string;

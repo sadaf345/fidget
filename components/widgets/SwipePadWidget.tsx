@@ -37,12 +37,16 @@ export default function SwipePadWidget({ disabled, hapticPower = 'medium' }: Swi
 
     const power = hapticPowerRef.current;
     try {
-      if (power === 'light') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      } else if (power === 'heavy') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-      } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      switch (power) {
+        case 'light': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); break;
+        case 'heavy': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}); break;
+        case 'soft': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => {}); break;
+        case 'rigid': Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {}); break;
+        case 'success': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); break;
+        case 'warning': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); break;
+        case 'error': Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); break;
+        case 'selection': Haptics.selectionAsync().catch(() => {}); break;
+        default: Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); break;
       }
     } catch (e) {
       console.log('Haptic not available:', e);
