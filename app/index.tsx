@@ -86,7 +86,7 @@ interface MenuCardProps {
 function MenuCard({ title, subtitle, icon, accentColor, onPress, delay }: MenuCardProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -96,35 +96,46 @@ function MenuCard({ title, subtitle, icon, accentColor, onPress, delay }: MenuCa
   }, [fadeAnim, slideAnim, delay]);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start();
+    Animated.timing(pressAnim, { toValue: 1, duration: 80, useNativeDriver: false }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
+    Animated.spring(pressAnim, { toValue: 0, useNativeDriver: false, friction: 6, tension: 200 }).start();
   };
+
+  const bgColor = pressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [theme.surface, 'rgba(255,255,255,0.08)'],
+  });
+
+  const borderColor = pressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [theme.border, 'rgba(255,255,255,0.15)'],
+  });
 
   return (
     <Animated.View
       style={{
         opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+        transform: [{ translateY: slideAnim }],
       }}
     >
       <TouchableOpacity
-        style={styles.menuCard}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <View style={[styles.menuIconWrap, { backgroundColor: accentColor + '15' }]}>
-          {icon}
-        </View>
-        <View style={styles.menuTextWrap}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle}>{subtitle}</Text>
-        </View>
-        <ChevronRight size={20} color={theme.textMuted} />
+        <Animated.View style={[styles.menuCard, { backgroundColor: bgColor, borderColor }]}>
+          <View style={[styles.menuIconWrap, { backgroundColor: accentColor + '15' }]}>
+            {icon}
+          </View>
+          <View style={styles.menuTextWrap}>
+            <Text style={styles.menuTitle}>{title}</Text>
+            <Text style={styles.menuSubtitle}>{subtitle}</Text>
+          </View>
+          <ChevronRight size={20} color={theme.textMuted} />
+        </Animated.View>
       </TouchableOpacity>
     </Animated.View>
   );

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Save, Trash2, Check, Heart } from 'lucide-react-native';
+import { ChevronLeft, Plus, Save, Trash2, Check, Heart, Pencil, Undo2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
@@ -28,7 +28,7 @@ export default function CreateFidgetPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { createFidget } = useSavedFidgets();
-  const { widgets, editMode, toggleEditMode, clearAllWidgets, resetWidgets } = useFidget();
+  const { widgets, editMode, toggleEditMode, clearAllWidgets, resetWidgets, undoLastChange, canUndo } = useFidget();
   const [name, setName] = useState('');
   const [favorited, setFavorited] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -122,7 +122,7 @@ export default function CreateFidgetPage() {
         >
           <ChevronLeft size={20} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Fidget</Text>
+        <Text style={styles.headerTitle}>Create</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.headerBtnDanger}
@@ -130,6 +130,18 @@ export default function CreateFidgetPage() {
             activeOpacity={0.7}
           >
             <Trash2 size={16} color="#F87171" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.undoBtn, !canUndo && styles.undoBtnDisabled]}
+            onPress={() => {
+              if (!canUndo) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              undoLastChange();
+            }}
+            activeOpacity={0.7}
+            disabled={!canUndo}
+          >
+            <Undo2 size={16} color={canUndo ? theme.textSecondary : theme.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addBtn}
@@ -143,7 +155,11 @@ export default function CreateFidgetPage() {
             onPress={toggleEditMode}
             activeOpacity={0.7}
           >
-            <Check size={16} color={editMode ? '#34D399' : theme.textMuted} />
+            {editMode ? (
+              <Check size={16} color="#34D399" />
+            ) : (
+              <Pencil size={14} color={theme.textMuted} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveHeaderBtn, widgets.length === 0 && styles.saveHeaderBtnDisabled]}
@@ -285,6 +301,19 @@ const styles = StyleSheet.create({
     borderColor: theme.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  undoBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  undoBtnDisabled: {
+    opacity: 0.4,
   },
   canvas: {
     flex: 1,
