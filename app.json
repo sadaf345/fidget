@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "iFidget Custom Vibration App",
+    "name": "fidget",
     "slug": "ifidget-custom-vibration",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.ifidget-custom-vibration"
+      "bundleIdentifier": "com.raison.fidget"
     },
     "android": {
       "adaptiveIcon": {
