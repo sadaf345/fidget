@@ -9,12 +9,14 @@ import PressHoldWidget from './PressHoldWidget';
 import ScrollWheelWidget from './ScrollWheelWidget';
 import HorizontalScrollWidget from './HorizontalScrollWidget';
 import SwipePadWidget from './SwipePadWidget';
+import LineWidget from './LineWidget';
 
 const BASE_SIZES: Record<WidgetType, { width: number; height: number }> = {
   'press-hold': { width: 110, height: 110 },
   'scroll-wheel': { width: 140, height: 140 },
   'horizontal-scroll': { width: 160, height: 64 },
   'swipe-pad': { width: 140, height: 140 },
+  'line': { width: 200, height: 36 },
 };
 
 const MIN_SCALE = 0.5;
@@ -256,10 +258,12 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
         return <HorizontalScrollWidget disabled={editMode} hapticPower={widget.hapticPower} />;
       case 'swipe-pad':
         return <SwipePadWidget disabled={editMode} hapticPower={widget.hapticPower} />;
+      case 'line':
+        return <LineWidget disabled={editMode} hapticPower={widget.hapticPower} lineThickness={widget.lineThickness} hasSlider={widget.hasSlider} />;
       default:
         return null;
     }
-  }, [widget.type, widget.hapticPower, editMode]);
+  }, [widget.type, widget.hapticPower, widget.lineThickness, widget.hasSlider, editMode]);
 
   const wiggleRotation = wiggleAnim.interpolate({
     inputRange: [-1, 0, 1],

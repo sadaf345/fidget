@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
-import { WidgetConfig, WidgetType, HapticPower } from '@/types/fidget';
+import { WidgetConfig, WidgetType, HapticPower, LineThickness } from '@/types/fidget';
 import { DEFAULT_WIDGETS } from '@/constants/widgets';
 
 const STORAGE_KEY = 'fidget_widgets';
@@ -63,13 +63,14 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     });
   }, [saveMutation, pushUndo]);
 
-  const addWidget = useCallback((type: WidgetType, options?: { hapticPower?: HapticPower }) => {
+  const addWidget = useCallback((type: WidgetType, options?: { hapticPower?: HapticPower; lineThickness?: LineThickness; hasSlider?: boolean }) => {
     const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const labels: Record<WidgetType, string> = {
       'press-hold': 'Press & Hold',
       'scroll-wheel': 'Scroll Wheel',
       'horizontal-scroll': 'Horizontal Scroll',
       'swipe-pad': 'Swipe Pad',
+      'line': 'Line',
     };
     const newWidget: WidgetConfig = {
       id,
@@ -79,6 +80,8 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
       rotation: 0,
       label: labels[type],
       ...(options?.hapticPower ? { hapticPower: options.hapticPower } : {}),
+      ...(options?.lineThickness !== undefined ? { lineThickness: options.lineThickness } : {}),
+      ...(options?.hasSlider !== undefined ? { hasSlider: options.hasSlider } : {}),
     };
     setWidgets(prev => {
       pushUndo(prev);
@@ -142,6 +145,10 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     });
   }, [saveMutation]);
 
+  const clearUndo = useCallback(() => {
+    setUndoStack([]);
+  }, []);
+
   const canUndo = undoStack.length > 0;
 
   const resetWidgets = useCallback(() => {
@@ -172,5 +179,6 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     canUndo,
     toggleEditMode,
     toggleWidgetLock,
+    clearUndo,
   };
 });

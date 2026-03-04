@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useFidget } from '@/contexts/FidgetContext';
 import { WIDGET_TYPES } from '@/constants/widgets';
-import { WidgetType, HapticPower } from '@/types/fidget';
+import { WidgetType, HapticPower, LineThickness } from '@/types/fidget';
 
 interface WidgetPickerProps {
   visible: boolean;
@@ -24,7 +24,18 @@ const WIDGET_SYMBOLS: Record<string, string> = {
   RotateCw: '↻',
   GripHorizontal: '≡',
   Move: '✥',
+  Minus: '━',
 };
+
+const LINE_THICKNESS_OPTIONS: { value: LineThickness; label: string }[] = [
+  { value: 0.5, label: 'Hairline' },
+  { value: 1, label: 'Thin' },
+  { value: 1.5, label: 'Light' },
+  { value: 2, label: 'Regular' },
+  { value: 3, label: 'Medium' },
+  { value: 5, label: 'Bold' },
+  { value: 8, label: 'Heavy' },
+];
 
 const HAPTIC_OPTIONS: { value: HapticPower; label: string; symbol: string; color: string; category: string }[] = [
   { value: 'light', label: 'Light', symbol: '○', color: '#7DD3C0', category: 'Impact' },
@@ -59,12 +70,18 @@ export default function WidgetPicker({ visible, onClose }: WidgetPickerProps) {
   const [selectedPower, setSelectedPower] = useState<HapticPower>('medium');
   const [showPowerPicker, setShowPowerPicker] = useState(false);
   const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
+  const [showLinePicker, setShowLinePicker] = useState(false);
+  const [selectedThickness, setSelectedThickness] = useState<LineThickness>(2);
+  const [hasSlider, setHasSlider] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setShowPowerPicker(false);
+      setShowLinePicker(false);
       setSelectedPower('medium');
       setSelectedType(null);
+      setSelectedThickness(2);
+      setHasSlider(false);
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -97,15 +114,28 @@ export default function WidgetPicker({ visible, onClose }: WidgetPickerProps) {
   const handleAdd = useCallback((type: WidgetType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSelectedType(type);
-    setShowPowerPicker(true);
+    if (type === 'line') {
+      setShowLinePicker(true);
+    } else {
+      setShowPowerPicker(true);
+    }
   }, []);
 
   const handleConfirmAdd = useCallback(() => {
     if (!selectedType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    addWidget(selectedType, { hapticPower: selectedPower });
+    if (selectedType === 'line') {
+      addWidget(selectedType, { hapticPower: selectedPower, lineThickness: selectedThickness, hasSlider });
+    } else {
+      addWidget(selectedType, { hapticPower: selectedPower });
+    }
     onClose();
-  }, [selectedType, selectedPower, addWidget, onClose]);
+  }, [selectedType, selectedPower, selectedThickness, hasSlider, addWidget, onClose]);
+
+  const handleLineNext = useCallback(() => {
+    setShowLinePicker(false);
+    setShowPowerPicker(true);
+  }, []);
 
   const handlePowerSelect = useCallback((power: HapticPower) => {
     setSelectedPower(power);
@@ -134,11 +164,19 @@ export default function WidgetPicker({ visible, onClose }: WidgetPickerProps) {
         <View style={styles.handleBar} />
         <View style={styles.header}>
           <Text style={styles.title}>
-            {showPowerPicker ? 'Haptic Feedback' : 'Add Widget'}
+            {showPowerPicker ? 'Haptic Feedback' : showLinePicker ? 'Line Options' : 'Add Widget'}
           </Text>
           <TouchableOpacity onPress={() => {
             if (showPowerPicker) {
-              setShowPowerPicker(false);
+              if (selectedType === 'line') {
+                setShowPowerPicker(false);
+                setShowLinePicker(true);
+              } else {
+                setShowPowerPicker(false);
+                setSelectedType(null);
+              }
+            } else if (showLinePicker) {
+              setShowLinePicker(false);
               setSelectedType(null);
             } else {
               onClose();
@@ -148,7 +186,59 @@ export default function WidgetPicker({ visible, onClose }: WidgetPickerProps) {
           </TouchableOpacity>
         </View>
 
-        {!showPowerPicker ? (
+        {showLinePicker ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.powerSection}
+          >
+            <Text style={styles.powerHint}>Choose line thickness</Text>
+            <View style={styles.thicknessGrid}>
+              {LINE_THICKNESS_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.thicknessChip,
+                    selectedThickness === opt.value && styles.thicknessChipActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedThickness(opt.value);
+                    Haptics.selectionAsync().catch(() => {});
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.thicknessPreview, { height: Math.max(opt.value, 1), borderRadius: opt.value / 2 }]} />
+                  <Text style={[
+                    styles.thicknessLabel,
+                    selectedThickness === opt.value && styles.thicknessLabelActive,
+                  ]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.sliderToggle}
+              onPress={() => {
+                setHasSlider(prev => !prev);
+                Haptics.selectionAsync().catch(() => {});
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.sliderToggleLeft}>
+                <Text style={styles.sliderToggleLabel}>Add Slider Button</Text>
+                <Text style={styles.sliderToggleDesc}>Drag along the line with haptic feedback</Text>
+              </View>
+              <View style={[styles.toggleSwitch, hasSlider && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleKnob, hasSlider && styles.toggleKnobActive]} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleLineNext}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.confirmText}>Choose Haptic</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : !showPowerPicker ? (
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
@@ -395,5 +485,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: theme.bg,
+  },
+  thicknessGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  thicknessChip: {
+    width: '31%' as any,
+    flexGrow: 1,
+    flexBasis: '29%' as any,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: theme.widgetBg,
+    borderWidth: 1.5,
+    borderColor: theme.widgetBorder,
+    alignItems: 'center',
+    gap: 6,
+  },
+  thicknessChipActive: {
+    borderColor: theme.accent,
+    backgroundColor: theme.accentGlow,
+  },
+  thicknessPreview: {
+    width: '80%',
+    backgroundColor: theme.textSecondary,
+  },
+  thicknessLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: theme.textSecondary,
+  },
+  thicknessLabelActive: {
+    color: theme.accent,
+  },
+  sliderToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: theme.widgetBg,
+    borderWidth: 1,
+    borderColor: theme.widgetBorder,
+    marginBottom: 16,
+  },
+  sliderToggleLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  sliderToggleLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: theme.text,
+    marginBottom: 2,
+  },
+  sliderToggleDesc: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    lineHeight: 16,
+  },
+  toggleSwitch: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: theme.surfaceLight,
+    borderWidth: 1,
+    borderColor: theme.border,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: theme.accentDim,
+    borderColor: theme.accent,
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.textMuted,
+  },
+  toggleKnobActive: {
+    backgroundColor: theme.accent,
+    alignSelf: 'flex-end' as const,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -46,9 +46,16 @@ const GridPattern = React.memo(function GridPattern() {
 export default function PlaygroundCanvas() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { widgets, editMode, isLoading, toggleEditMode, undoLastChange, canUndo, clearAllWidgets } = useFidget();
+  const { widgets, editMode, isLoading, toggleEditMode, undoLastChange, canUndo, clearAllWidgets, clearUndo } = useFidget();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    clearUndo();
+    return () => {
+      clearUndo();
+    };
+  }, []);
 
   const handleCanvasLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;

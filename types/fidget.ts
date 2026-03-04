@@ -1,6 +1,8 @@
-export type WidgetType = 'press-hold' | 'scroll-wheel' | 'horizontal-scroll' | 'swipe-pad';
+export type WidgetType = 'press-hold' | 'scroll-wheel' | 'horizontal-scroll' | 'swipe-pad' | 'line';
 
 export type HapticPower = 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' | 'success' | 'warning' | 'error' | 'selection';
+
+export type LineThickness = 0.5 | 1 | 1.5 | 2 | 3 | 5 | 8;
 
 export interface WidgetConfig {
   id: string;
@@ -12,6 +14,8 @@ export interface WidgetConfig {
   hapticPower?: HapticPower;
   locked?: boolean;
   scale?: number;
+  lineThickness?: LineThickness;
+  hasSlider?: boolean;
 }
 
 export interface WidgetTypeInfo {

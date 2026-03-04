@@ -29,6 +29,13 @@ export const WIDGET_TYPES: WidgetTypeInfo[] = [
     icon: 'Move',
     defaultSize: { width: 140, height: 140 },
   },
+  {
+    type: 'line',
+    label: 'Line',
+    description: 'Draw a line with adjustable thickness and optional slider',
+    icon: 'Minus',
+    defaultSize: { width: 200, height: 20 },
+  },
 ];
 
 export const DEFAULT_WIDGETS = [

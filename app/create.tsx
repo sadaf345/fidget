@@ -28,7 +28,7 @@ export default function CreateFidgetPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { createFidget } = useSavedFidgets();
-  const { widgets, editMode, toggleEditMode, clearAllWidgets, resetWidgets, undoLastChange, canUndo } = useFidget();
+  const { widgets, editMode, toggleEditMode, clearAllWidgets, resetWidgets, undoLastChange, canUndo, clearUndo } = useFidget();
   const [name, setName] = useState('');
   const [favorited, setFavorited] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -43,9 +43,13 @@ export default function CreateFidgetPage() {
 
   useEffect(() => {
     clearAllWidgets();
+    clearUndo();
     if (!editMode) {
       toggleEditMode();
     }
+    return () => {
+      clearUndo();
+    };
   }, []);
 
   const handleCanvasLayout = useCallback((e: LayoutChangeEvent) => {
@@ -114,9 +118,36 @@ export default function CreateFidgetPage() {
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => {
-            if (editMode) toggleEditMode();
-            clearAllWidgets();
-            router.back();
+            if (widgets.length > 0) {
+              Alert.alert(
+                'Unsaved Changes',
+                'You have widgets on the board. Would you like to save before leaving?',
+                [
+                  {
+                    text: 'Discard',
+                    style: 'destructive',
+                    onPress: () => {
+                      if (editMode) toggleEditMode();
+                      clearAllWidgets();
+                      clearUndo();
+                      router.back();
+                    },
+                  },
+                  {
+                    text: 'Save',
+                    onPress: () => {
+                      handleSavePrompt();
+                    },
+                  },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              );
+            } else {
+              if (editMode) toggleEditMode();
+              clearAllWidgets();
+              clearUndo();
+              router.back();
+            }
           }}
           activeOpacity={0.7}
         >

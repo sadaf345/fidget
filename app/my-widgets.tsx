@@ -18,6 +18,7 @@ import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
 import { SavedFidget } from '@/types/fidget';
 
 type SortMode = 'date' | 'favorites' | 'both';
+type SortDirection = 'desc' | 'asc';
 
 function EmptyState() {
   const router = useRouter();
@@ -151,30 +152,38 @@ export default function MyWidgetsPage() {
   const router = useRouter();
   const { fidgets, isLoading } = useSavedFidgets();
   const [sortMode, setSortMode] = useState<SortMode>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const handleSort = useCallback((mode: SortMode) => {
     Haptics.selectionAsync().catch(() => {});
-    setSortMode(mode);
-  }, []);
+    if (mode === sortMode) {
+      setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortMode(mode);
+      setSortDirection('desc');
+    }
+  }, [sortMode]);
 
   const sortedFidgets = React.useMemo(() => {
     let list = [...fidgets];
+    const dir = sortDirection === 'desc' ? 1 : -1;
     if (sortMode === 'favorites') {
       list = list.filter(f => f.favorited);
-      list.sort((a, b) => b.createdAt - a.createdAt);
+      list.sort((a, b) => (b.createdAt - a.createdAt) * dir);
     } else if (sortMode === 'both') {
       list.sort((a, b) => {
-        if (a.favorited && !b.favorited) return -1;
-        if (!a.favorited && b.favorited) return 1;
-        return b.createdAt - a.createdAt;
+        if (a.favorited && !b.favorited) return -1 * dir;
+        if (!a.favorited && b.favorited) return 1 * dir;
+        return (b.createdAt - a.createdAt) * dir;
       });
     } else {
-      list.sort((a, b) => b.createdAt - a.createdAt);
+      list.sort((a, b) => (b.createdAt - a.createdAt) * dir);
     }
     return list;
-  }, [fidgets, sortMode]);
+  }, [fidgets, sortMode, sortDirection]);
 
-  const sortLabel = sortMode === 'date' ? 'Newest' : sortMode === 'favorites' ? 'Favorites' : 'Fav + Date';
+  const getDateLabel = () => sortDirection === 'desc' ? 'Newest' : 'Oldest';
+  const getBothLabel = () => sortDirection === 'desc' ? 'Fav + Date' : 'Date + Fav';
 
   return (
     <View style={styles.root}>
@@ -202,7 +211,7 @@ export default function MyWidgetsPage() {
           activeOpacity={0.7}
         >
           <Clock size={13} color={sortMode === 'date' ? theme.bg : theme.textMuted} />
-          <Text style={[styles.sortChipText, sortMode === 'date' && styles.sortChipTextActive]}>Newest</Text>
+          <Text style={[styles.sortChipText, sortMode === 'date' && styles.sortChipTextActive]}>{getDateLabel()}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sortChip, sortMode === 'favorites' && styles.sortChipActive]}
@@ -218,7 +227,7 @@ export default function MyWidgetsPage() {
           activeOpacity={0.7}
         >
           <SlidersHorizontal size={13} color={sortMode === 'both' ? theme.bg : theme.textMuted} />
-          <Text style={[styles.sortChipText, sortMode === 'both' && styles.sortChipTextActive]}>Fav + Date</Text>
+          <Text style={[styles.sortChipText, sortMode === 'both' && styles.sortChipTextActive]}>{getBothLabel()}</Text>
         </TouchableOpacity>
       </View>
 
