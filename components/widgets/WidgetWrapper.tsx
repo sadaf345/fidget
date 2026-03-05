@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Animated, PanResponder, TouchableOpacity } from 'react-native';
-import { X, RotateCw, Lock, Unlock } from 'lucide-react-native';
+import { X, RotateCw, Lock, Unlock, CircleDot } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { WidgetConfig, WidgetType } from '@/types/fidget';
@@ -19,11 +19,18 @@ const BASE_SIZES: Record<WidgetType, { width: number; height: number }> = {
   'line': { width: 200, height: 36 },
 };
 
+function getWidgetBaseSize(widget: WidgetConfig): { width: number; height: number } {
+  if (widget.type === 'line' && widget.drawWidth && widget.drawHeight) {
+    return { width: widget.drawWidth, height: widget.drawHeight };
+  }
+  return BASE_SIZES[widget.type];
+}
+
 const MIN_SCALE = 0.5;
 const MAX_SCALE_CAP = 2.5;
 
-function getMaxScale(widgetType: WidgetType, cw: number, ch: number): number {
-  const base = BASE_SIZES[widgetType];
+function getMaxScale(widget: WidgetConfig, cw: number, ch: number): number {
+  const base = getWidgetBaseSize(widget);
   return Math.min((cw - 20) / base.width, (ch - 20) / base.height, MAX_SCALE_CAP);
 }
 
@@ -41,7 +48,7 @@ interface WidgetWrapperProps {
 }
 
 function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapperProps) {
-  const { editMode, updateWidgetPosition, updateWidgetRotation, updateWidgetScale, removeWidget, toggleWidgetLock } = useFidget();
+  const { editMode, updateWidgetPosition, updateWidgetRotation, updateWidgetScale, removeWidget, toggleWidgetLock, toggleWidgetSlider } = useFidget();
 
   const widgetScale = widget.scale ?? 1;
   const posX = useRef(new Animated.Value(widget.x * canvasWidth)).current;
@@ -157,7 +164,7 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
           }
           const dist = getDistance(touches as any);
           if (s.pinchStartDist === 0) return;
-          const maxS = getMaxScale(s.widget.type, s.canvasWidth, s.canvasHeight);
+          const maxS = getMaxScale(s.widget, s.canvasWidth, s.canvasHeight);
           const ns = Math.max(MIN_SCALE, Math.min(maxS, s.pinchStartScale * (dist / s.pinchStartDist)));
           pinchScaleAnim.setValue(ns);
           s.currentScale = ns;
@@ -172,7 +179,7 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
         const s = stateRef.current;
         if (s.isPinching) {
           s.isPinching = false;
-          const maxS = getMaxScale(s.widget.type, s.canvasWidth, s.canvasHeight);
+          const maxS = getMaxScale(s.widget, s.canvasWidth, s.canvasHeight);
           const fs = Math.max(MIN_SCALE, Math.min(maxS, s.currentScale));
           fnRef.current.updateWidgetScale(s.widget.id, Math.round(fs * 100) / 100);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -248,6 +255,11 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
     toggleWidgetLock(widget.id);
   }, [widget.id, toggleWidgetLock]);
 
+  const handleToggleSlider = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    toggleWidgetSlider(widget.id);
+  }, [widget.id, toggleWidgetSlider]);
+
   const widgetContent = useMemo(() => {
     switch (widget.type) {
       case 'press-hold':
@@ -259,11 +271,11 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
       case 'swipe-pad':
         return <SwipePadWidget disabled={editMode} hapticPower={widget.hapticPower} />;
       case 'line':
-        return <LineWidget disabled={editMode} hapticPower={widget.hapticPower} lineThickness={widget.lineThickness} hasSlider={widget.hasSlider} />;
+        return <LineWidget disabled={editMode} hapticPower={widget.hapticPower} lineThickness={widget.lineThickness} hasSlider={widget.hasSlider} drawPoints={widget.drawPoints} drawWidth={widget.drawWidth} drawHeight={widget.drawHeight} />;
       default:
         return null;
     }
-  }, [widget.type, widget.hapticPower, widget.lineThickness, widget.hasSlider, editMode]);
+  }, [widget.type, widget.hapticPower, widget.lineThickness, widget.hasSlider, widget.drawPoints, widget.drawWidth, widget.drawHeight, editMode]);
 
   const wiggleRotation = wiggleAnim.interpolate({
     inputRange: [-1, 0, 1],
@@ -298,6 +310,15 @@ function WidgetWrapperInner({ widget, canvasWidth, canvasHeight }: WidgetWrapper
             <X size={14} color={theme.white} strokeWidth={3} />
           </TouchableOpacity>
           <View style={styles.rightControls}>
+            {widget.type === 'line' && widget.drawPoints && widget.drawPoints.length >= 2 && (
+              <TouchableOpacity
+                style={[styles.sliderToggleButton, widget.hasSlider && styles.sliderToggleButtonActive]}
+                onPress={handleToggleSlider}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <CircleDot size={11} color={widget.hasSlider ? theme.accent : theme.textMuted} strokeWidth={2.5} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.lockButton, widget.locked && styles.lockButtonActive]}
               onPress={handleToggleLock}
@@ -394,5 +415,19 @@ const styles = StyleSheet.create({
   widgetContentLocked: {
     borderColor: theme.textMuted,
     opacity: 0.7,
+  },
+  sliderToggleButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderToggleButtonActive: {
+    borderColor: theme.accent,
+    backgroundColor: theme.accentGlow,
   },
 });

@@ -4,6 +4,11 @@ export type HapticPower = 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' | 'suc
 
 export type LineThickness = 0.5 | 1 | 1.5 | 2 | 3 | 5 | 8;
 
+export interface DrawPoint {
+  x: number;
+  y: number;
+}
+
 export interface WidgetConfig {
   id: string;
   type: WidgetType;
@@ -16,6 +21,9 @@ export interface WidgetConfig {
   scale?: number;
   lineThickness?: LineThickness;
   hasSlider?: boolean;
+  drawPoints?: DrawPoint[];
+  drawWidth?: number;
+  drawHeight?: number;
 }
 
 export interface WidgetTypeInfo {

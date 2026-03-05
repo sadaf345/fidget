@@ -13,11 +13,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Settings, Undo2, Check, ChevronLeft, Trash2 } from 'lucide-react-native';
+import { LineThickness, DrawPoint } from '@/types/fidget';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useFidget } from '@/contexts/FidgetContext';
 import WidgetWrapper from '@/components/widgets/WidgetWrapper';
 import WidgetPicker from '@/components/WidgetPicker';
+import DrawingCanvas from '@/components/DrawingCanvas';
 
 function BackgroundOrbs() {
   return (
@@ -46,9 +48,11 @@ const GridPattern = React.memo(function GridPattern() {
 export default function PlaygroundCanvas() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { widgets, editMode, isLoading, toggleEditMode, undoLastChange, canUndo, clearAllWidgets, clearUndo } = useFidget();
+  const { widgets, editMode, isLoading, toggleEditMode, undoLastChange, canUndo, clearAllWidgets, clearUndo, addDrawnLine } = useFidget();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [drawingMode, setDrawingMode] = useState(false);
+  const [drawingThickness, setDrawingThickness] = useState<LineThickness>(2);
 
   useEffect(() => {
     clearUndo();
@@ -70,6 +74,20 @@ export default function PlaygroundCanvas() {
   const handleAddWidget = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setPickerVisible(true);
+  }, []);
+
+  const handleStartDrawing = useCallback((thickness: LineThickness) => {
+    setDrawingThickness(thickness);
+    setDrawingMode(true);
+  }, []);
+
+  const handleDrawingComplete = useCallback((points: DrawPoint[], width: number, height: number, centerX: number, centerY: number) => {
+    addDrawnLine(points, width, height, centerX, centerY, drawingThickness);
+    setDrawingMode(false);
+  }, [addDrawnLine, drawingThickness]);
+
+  const handleDrawingCancel = useCallback(() => {
+    setDrawingMode(false);
   }, []);
 
   const handleUndo = useCallback(() => {
@@ -208,7 +226,18 @@ export default function PlaygroundCanvas() {
       <WidgetPicker
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
+        onStartDrawing={handleStartDrawing}
       />
+
+      {drawingMode && canvasSize.width > 0 && (
+        <DrawingCanvas
+          canvasWidth={canvasSize.width}
+          canvasHeight={canvasSize.height}
+          lineThickness={drawingThickness}
+          onComplete={handleDrawingComplete}
+          onCancel={handleDrawingCancel}
+        />
+      )}
     </View>
   );
 }

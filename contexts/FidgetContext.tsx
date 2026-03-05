@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
-import { WidgetConfig, WidgetType, HapticPower, LineThickness } from '@/types/fidget';
+import { WidgetConfig, WidgetType, HapticPower, LineThickness, DrawPoint } from '@/types/fidget';
 import { DEFAULT_WIDGETS } from '@/constants/widgets';
 
 const STORAGE_KEY = 'fidget_widgets';
@@ -135,6 +135,38 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     });
   }, [saveMutation, pushUndo]);
 
+  const addDrawnLine = useCallback((points: DrawPoint[], drawWidth: number, drawHeight: number, centerX: number, centerY: number, lineThickness: LineThickness) => {
+    const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newWidget: WidgetConfig = {
+      id,
+      type: 'line',
+      x: centerX,
+      y: centerY,
+      rotation: 0,
+      label: 'Line',
+      lineThickness,
+      hasSlider: false,
+      drawPoints: points,
+      drawWidth,
+      drawHeight,
+    };
+    setWidgets(prev => {
+      pushUndo(prev);
+      const updated = [...prev, newWidget];
+      saveMutation.mutate(updated);
+      return updated;
+    });
+  }, [saveMutation, pushUndo]);
+
+  const toggleWidgetSlider = useCallback((id: string) => {
+    setWidgets(prev => {
+      pushUndo(prev);
+      const updated = prev.map(w => w.id === id ? { ...w, hasSlider: !w.hasSlider } : w);
+      saveMutation.mutate(updated);
+      return updated;
+    });
+  }, [saveMutation, pushUndo]);
+
   const undoLastChange = useCallback(() => {
     setUndoStack(prev => {
       if (prev.length === 0) return prev;
@@ -172,7 +204,9 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     updateWidgetHapticPower,
     updateWidgetScale,
     addWidget,
+    addDrawnLine,
     removeWidget,
+    toggleWidgetSlider,
     clearAllWidgets,
     resetWidgets,
     undoLastChange,

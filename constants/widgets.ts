@@ -32,7 +32,7 @@ export const WIDGET_TYPES: WidgetTypeInfo[] = [
   {
     type: 'line',
     label: 'Line',
-    description: 'Draw a line with adjustable thickness and optional slider',
+    description: 'Freely draw a line and optionally add a slider button',
     icon: 'Minus',
     defaultSize: { width: 200, height: 20 },
   },

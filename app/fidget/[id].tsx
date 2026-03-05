@@ -12,19 +12,21 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Heart, Settings, Check, Plus, Trash2, Pencil } from 'lucide-react-native';
+import { LineThickness, DrawPoint } from '@/types/fidget';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
 import { useFidget } from '@/contexts/FidgetContext';
 import WidgetWrapper from '@/components/widgets/WidgetWrapper';
 import WidgetPicker from '@/components/WidgetPicker';
+import DrawingCanvas from '@/components/DrawingCanvas';
 
 export default function FidgetEditorPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getFidgetById, updateFidget, toggleFavorite } = useSavedFidgets();
-  const { widgets, editMode, toggleEditMode, clearAllWidgets, addWidget } = useFidget();
+  const { widgets, editMode, toggleEditMode, clearAllWidgets, addWidget, addDrawnLine } = useFidget();
 
   const fidget = getFidgetById(id ?? '');
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -32,6 +34,8 @@ export default function FidgetEditorPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(fidget?.name ?? '');
   const [hasLoadedWidgets, setHasLoadedWidgets] = useState(false);
+  const [drawingMode, setDrawingMode] = useState(false);
+  const [drawingThickness, setDrawingThickness] = useState<LineThickness>(2);
 
   useEffect(() => {
     if (fidget && !hasLoadedWidgets) {
@@ -62,6 +66,20 @@ export default function FidgetEditorPage() {
   const handleAddWidget = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setPickerVisible(true);
+  }, []);
+
+  const handleStartDrawing = useCallback((thickness: LineThickness) => {
+    setDrawingThickness(thickness);
+    setDrawingMode(true);
+  }, []);
+
+  const handleDrawingComplete = useCallback((points: DrawPoint[], width: number, height: number, centerX: number, centerY: number) => {
+    addDrawnLine(points, width, height, centerX, centerY, drawingThickness);
+    setDrawingMode(false);
+  }, [addDrawnLine, drawingThickness]);
+
+  const handleDrawingCancel = useCallback(() => {
+    setDrawingMode(false);
   }, []);
 
   const handleClearAll = useCallback(() => {
@@ -221,7 +239,18 @@ export default function FidgetEditorPage() {
       <WidgetPicker
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
+        onStartDrawing={handleStartDrawing}
       />
+
+      {drawingMode && canvasSize.width > 0 && (
+        <DrawingCanvas
+          canvasWidth={canvasSize.width}
+          canvasHeight={canvasSize.height}
+          lineThickness={drawingThickness}
+          onComplete={handleDrawingComplete}
+          onCancel={handleDrawingCancel}
+        />
+      )}
     </View>
   );
 }

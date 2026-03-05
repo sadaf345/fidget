@@ -1,18 +1,21 @@
 import React, { useRef, useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, Animated, PanResponder } from 'react-native';
+import { View, StyleSheet, PanResponder } from 'react-native';
+import Svg, { Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
-import { HapticPower, LineThickness } from '@/types/fidget';
+import { HapticPower, LineThickness, DrawPoint } from '@/types/fidget';
 
 interface LineWidgetProps {
   disabled?: boolean;
   hapticPower?: HapticPower;
   lineThickness?: LineThickness;
   hasSlider?: boolean;
+  drawPoints?: DrawPoint[];
+  drawWidth?: number;
+  drawHeight?: number;
 }
 
 const SLIDER_SIZE = 28;
-const LINE_WIDTH = 200;
 
 function triggerHapticForPower(power: HapticPower) {
   switch (power) {
@@ -28,19 +31,73 @@ function triggerHapticForPower(power: HapticPower) {
   }
 }
 
-export default function LineWidget({ disabled, hapticPower = 'medium', lineThickness = 2, hasSlider = false }: LineWidgetProps) {
-  const sliderX = useRef(new Animated.Value(0)).current;
-  const sliderStartX = useRef(0);
+function getClosestPointOnPath(points: DrawPoint[], tx: number, ty: number): { point: DrawPoint; index: number; t: number } {
+  let bestDist = Infinity;
+  let bestPoint: DrawPoint = points[0];
+  let bestIndex = 0;
+  let bestT = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const ax = points[i].x;
+    const ay = points[i].y;
+    const bx = points[i + 1].x;
+    const by = points[i + 1].y;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = 0;
+    if (lenSq > 0) {
+      t = Math.max(0, Math.min(1, ((tx - ax) * dx + (ty - ay) * dy) / lenSq));
+    }
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const dist = (tx - px) * (tx - px) + (ty - py) * (ty - py);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestPoint = { x: px, y: py };
+      bestIndex = i;
+      bestT = t;
+    }
+  }
+
+  return { point: bestPoint, index: bestIndex, t: bestT };
+}
+
+function getCumulativeLength(points: DrawPoint[]): number[] {
+  const lengths = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    lengths.push(lengths[i - 1] + Math.sqrt(dx * dx + dy * dy));
+  }
+  return lengths;
+}
+
+export default function LineWidget({
+  disabled,
+  hapticPower = 'medium',
+  lineThickness = 2,
+  hasSlider = false,
+  drawPoints,
+  drawWidth = 200,
+  drawHeight = 36,
+}: LineWidgetProps) {
+  const [sliderPos, setSliderPos] = useState<DrawPoint | null>(null);
+  const [sliderActive, setSliderActive] = useState(false);
   const lastHapticTime = useRef(0);
   const lastMoveTime = useRef(0);
-  const lastMoveX = useRef(0);
-  const [sliderActive, setSliderActive] = useState(false);
+  const lastProgress = useRef(0);
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
   const hapticPowerRef = useRef(hapticPower);
   hapticPowerRef.current = hapticPower;
+  const drawPointsRef = useRef(drawPoints);
+  drawPointsRef.current = drawPoints;
 
-  const maxSliderX = LINE_WIDTH - SLIDER_SIZE;
+  const cumulativeLengths = useMemo(() => {
+    if (!drawPoints || drawPoints.length < 2) return [];
+    return getCumulativeLength(drawPoints);
+  }, [drawPoints]);
 
   const getHapticInterval = useCallback((speed: number): number => {
     if (speed < 50) return 200;
@@ -49,89 +106,119 @@ export default function LineWidget({ disabled, hapticPower = 'medium', lineThick
     return 40;
   }, []);
 
-  const sliderPanResponder = useMemo(() =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabledRef.current && hasSlider,
-      onMoveShouldSetPanResponder: (_, gs) => !disabledRef.current && hasSlider && Math.abs(gs.dx) > 2,
-      onStartShouldSetPanResponderCapture: () => !disabledRef.current && hasSlider,
-      onMoveShouldSetPanResponderCapture: (_, gs) => !disabledRef.current && hasSlider && Math.abs(gs.dx) > 2,
+  const sliderPanResponder = useMemo(() => {
+    if (!hasSlider || !drawPoints || drawPoints.length < 2) return null;
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabledRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current,
+      onStartShouldSetPanResponderCapture: () => !disabledRef.current,
+      onMoveShouldSetPanResponderCapture: () => !disabledRef.current,
       onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => {
+      onPanResponderGrant: (evt) => {
         setSliderActive(true);
         triggerHapticForPower(hapticPowerRef.current);
         lastMoveTime.current = Date.now();
-        lastMoveX.current = sliderStartX.current;
+        const pts = drawPointsRef.current;
+        if (pts && pts.length >= 2) {
+          const touch = evt.nativeEvent;
+          const result = getClosestPointOnPath(pts, touch.locationX, touch.locationY);
+          setSliderPos(result.point);
+        }
       },
-      onPanResponderMove: (_, gs) => {
-        const newX = Math.max(0, Math.min(maxSliderX, sliderStartX.current + gs.dx));
-        sliderX.setValue(newX);
+      onPanResponderMove: (evt) => {
+        const pts = drawPointsRef.current;
+        if (!pts || pts.length < 2) return;
+        const touch = evt.nativeEvent;
+        const result = getClosestPointOnPath(pts, touch.locationX, touch.locationY);
+        setSliderPos(result.point);
 
         const now = Date.now();
         const dt = now - lastMoveTime.current;
         if (dt > 0) {
-          const speed = Math.abs(newX - lastMoveX.current) / dt * 1000;
+          const totalLen = cumulativeLengths[cumulativeLengths.length - 1] || 1;
+          const segLen = cumulativeLengths[result.index] || 0;
+          const segDx = pts[result.index + 1].x - pts[result.index].x;
+          const segDy = pts[result.index + 1].y - pts[result.index].y;
+          const segLength = Math.sqrt(segDx * segDx + segDy * segDy);
+          const progress = (segLen + result.t * segLength) / totalLen;
+          const speed = Math.abs(progress - lastProgress.current) / dt * 1000 * totalLen;
           const interval = getHapticInterval(speed);
           if (now - lastHapticTime.current >= interval) {
             triggerHapticForPower(hapticPowerRef.current);
             lastHapticTime.current = now;
           }
+          lastProgress.current = progress;
         }
         lastMoveTime.current = now;
-        lastMoveX.current = newX;
       },
-      onPanResponderRelease: (_, gs) => {
-        const newX = Math.max(0, Math.min(maxSliderX, sliderStartX.current + gs.dx));
-        sliderStartX.current = newX;
+      onPanResponderRelease: () => {
         setSliderActive(false);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       },
-      onPanResponderTerminate: (_, gs) => {
-        const newX = Math.max(0, Math.min(maxSliderX, sliderStartX.current + gs.dx));
-        sliderStartX.current = newX;
+      onPanResponderTerminate: () => {
         setSliderActive(false);
       },
-    }),
-  [sliderX, maxSliderX, hasSlider, getHapticInterval]);
+    });
+  }, [hasSlider, drawPoints, cumulativeLengths, getHapticInterval]);
 
-  const effectiveThickness = Math.max(lineThickness, 0.5);
-  const containerHeight = hasSlider ? Math.max(SLIDER_SIZE + 8, effectiveThickness + 16) : Math.max(20, effectiveThickness + 16);
+  if (!drawPoints || drawPoints.length < 2) {
+    const effectiveThickness = Math.max(lineThickness, 0.5);
+    return (
+      <View style={[styles.fallbackContainer, { height: Math.max(20, effectiveThickness + 16) }]}>
+        <View
+          style={[
+            styles.fallbackLine,
+            { height: effectiveThickness, borderRadius: effectiveThickness / 2 },
+          ]}
+        />
+      </View>
+    );
+  }
+
+  const pointsString = drawPoints.map(p => `${p.x},${p.y}`).join(' ');
+  const initialSliderPos = sliderPos || drawPoints[0];
 
   return (
-    <View style={[styles.container, { height: containerHeight }]}>
-      <View
-        style={[
-          styles.line,
-          {
-            height: effectiveThickness,
-            borderRadius: effectiveThickness / 2,
-          },
-        ]}
-      />
+    <View
+      style={{ width: drawWidth, height: drawHeight }}
+      {...(sliderPanResponder ? sliderPanResponder.panHandlers : {})}
+    >
+      <Svg width={drawWidth} height={drawHeight}>
+        <Polyline
+          points={pointsString}
+          fill="none"
+          stroke={theme.textSecondary}
+          strokeWidth={lineThickness}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
       {hasSlider && (
-        <Animated.View
-          {...sliderPanResponder.panHandlers}
+        <View
           style={[
             styles.slider,
             sliderActive && styles.sliderActive,
             {
-              transform: [{ translateX: sliderX }],
+              left: initialSliderPos.x - SLIDER_SIZE / 2,
+              top: initialSliderPos.y - SLIDER_SIZE / 2,
             },
           ]}
         >
           <View style={[styles.sliderInner, sliderActive && styles.sliderInnerActive]} />
-        </Animated.View>
+        </View>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: LINE_WIDTH,
+  fallbackContainer: {
+    width: 200,
     justifyContent: 'center',
     position: 'relative',
   },
-  line: {
+  fallbackLine: {
     width: '100%',
     backgroundColor: theme.textSecondary,
   },
@@ -145,8 +232,6 @@ const styles = StyleSheet.create({
     borderColor: '#3A3A4A',
     alignItems: 'center',
     justifyContent: 'center',
-    top: '50%',
-    marginTop: -SLIDER_SIZE / 2,
     shadowColor: theme.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
