@@ -135,7 +135,7 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     });
   }, [saveMutation, pushUndo]);
 
-  const addDrawnLine = useCallback((points: DrawPoint[], drawWidth: number, drawHeight: number, centerX: number, centerY: number, lineThickness: LineThickness) => {
+  const addDrawnLine = useCallback((points: DrawPoint[], drawWidth: number, drawHeight: number, centerX: number, centerY: number, lineThickness: LineThickness, hapticPower?: HapticPower) => {
     const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const newWidget: WidgetConfig = {
       id,
@@ -145,7 +145,8 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
       rotation: 0,
       label: 'Line',
       lineThickness,
-      hasSlider: false,
+      hapticPower: hapticPower ?? 'medium',
+      hasSlider: true,
       drawPoints: points,
       drawWidth,
       drawHeight,

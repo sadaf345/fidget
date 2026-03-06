@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Settings, Undo2, Check, ChevronLeft, Trash2 } from 'lucide-react-native';
-import { LineThickness, DrawPoint } from '@/types/fidget';
+import { LineThickness, DrawPoint, HapticPower } from '@/types/fidget';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useFidget } from '@/contexts/FidgetContext';
@@ -53,6 +53,7 @@ export default function PlaygroundCanvas() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [drawingMode, setDrawingMode] = useState(false);
   const [drawingThickness, setDrawingThickness] = useState<LineThickness>(2);
+  const [drawingHapticPower, setDrawingHapticPower] = useState<HapticPower>('medium');
 
   useEffect(() => {
     clearUndo();
@@ -76,15 +77,16 @@ export default function PlaygroundCanvas() {
     setPickerVisible(true);
   }, []);
 
-  const handleStartDrawing = useCallback((thickness: LineThickness) => {
+  const handleStartDrawing = useCallback((thickness: LineThickness, hapticPower: HapticPower) => {
     setDrawingThickness(thickness);
+    setDrawingHapticPower(hapticPower);
     setDrawingMode(true);
   }, []);
 
   const handleDrawingComplete = useCallback((points: DrawPoint[], width: number, height: number, centerX: number, centerY: number) => {
-    addDrawnLine(points, width, height, centerX, centerY, drawingThickness);
+    addDrawnLine(points, width, height, centerX, centerY, drawingThickness, drawingHapticPower);
     setDrawingMode(false);
-  }, [addDrawnLine, drawingThickness]);
+  }, [addDrawnLine, drawingThickness, drawingHapticPower]);
 
   const handleDrawingCancel = useCallback(() => {
     setDrawingMode(false);

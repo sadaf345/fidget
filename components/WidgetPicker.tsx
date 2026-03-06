@@ -17,7 +17,7 @@ import { WidgetType, HapticPower, LineThickness } from '@/types/fidget';
 interface WidgetPickerProps {
   visible: boolean;
   onClose: () => void;
-  onStartDrawing?: (thickness: LineThickness) => void;
+  onStartDrawing?: (thickness: LineThickness, hapticPower: HapticPower) => void;
 }
 
 const WIDGET_SYMBOLS: Record<string, string> = {
@@ -72,14 +72,18 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
   const [showPowerPicker, setShowPowerPicker] = useState(false);
   const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
   const [showLinePicker, setShowLinePicker] = useState(false);
+  const [showLineHaptic, setShowLineHaptic] = useState(false);
   const [selectedThickness, setSelectedThickness] = useState<LineThickness>(2);
+  const [selectedLinePower, setSelectedLinePower] = useState<HapticPower>('medium');
 
 
   useEffect(() => {
     if (visible) {
       setShowPowerPicker(false);
       setShowLinePicker(false);
+      setShowLineHaptic(false);
       setSelectedPower('medium');
+      setSelectedLinePower('medium');
       setSelectedType(null);
       setSelectedThickness(2);
 
@@ -129,13 +133,24 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
     onClose();
   }, [selectedType, selectedPower, addWidget, onClose]);
 
-  const handleLineConfirm = useCallback(() => {
+  const handleLineThicknessConfirm = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setShowLinePicker(false);
+    setShowLineHaptic(true);
+  }, []);
+
+  const handleLineHapticConfirm = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     if (onStartDrawing) {
-      onStartDrawing(selectedThickness);
+      onStartDrawing(selectedThickness, selectedLinePower);
     }
     onClose();
-  }, [selectedThickness, onStartDrawing, onClose]);
+  }, [selectedThickness, selectedLinePower, onStartDrawing, onClose]);
+
+  const handleLinePowerSelect = useCallback((power: HapticPower) => {
+    setSelectedLinePower(power);
+    triggerHapticForPower(power);
+  }, []);
 
   const handlePowerSelect = useCallback((power: HapticPower) => {
     setSelectedPower(power);
@@ -164,7 +179,7 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
         <View style={styles.handleBar} />
         <View style={styles.header}>
           <Text style={styles.title}>
-            {showPowerPicker ? 'Haptic Feedback' : showLinePicker ? 'Line Options' : 'Add Widget'}
+            {showPowerPicker ? 'Haptic Feedback' : showLineHaptic ? 'Haptic Feedback' : showLinePicker ? 'Line Thickness' : 'Add Widget'}
           </Text>
           <TouchableOpacity onPress={() => {
             if (showPowerPicker) {
@@ -175,6 +190,9 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
                 setShowPowerPicker(false);
                 setSelectedType(null);
               }
+            } else if (showLineHaptic) {
+              setShowLineHaptic(false);
+              setShowLinePicker(true);
             } else if (showLinePicker) {
               setShowLinePicker(false);
               setSelectedType(null);
@@ -186,12 +204,62 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
           </TouchableOpacity>
         </View>
 
-        {showLinePicker ? (
+        {showLineHaptic ? (
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.powerSection}
           >
-            <Text style={styles.powerHint}>Choose line thickness, then draw on the canvas</Text>
+            <Text style={styles.powerHint}>Choose how the haptic feels when sliding the button</Text>
+            <View style={styles.hapticGrid}>
+              {HAPTIC_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.hapticChip,
+                    selectedLinePower === opt.value && { borderColor: opt.color, backgroundColor: opt.color + '18' },
+                  ]}
+                  onPress={() => handleLinePowerSelect(opt.value)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.hapticSymbol,
+                    { color: selectedLinePower === opt.value ? opt.color : theme.textMuted },
+                  ]}>{opt.symbol}</Text>
+                  <Text style={[
+                    styles.hapticLabel,
+                    selectedLinePower === opt.value && { color: opt.color },
+                  ]}>{opt.label}</Text>
+                  <Text style={[
+                    styles.hapticCategory,
+                    selectedLinePower === opt.value && { color: opt.color, opacity: 0.7 },
+                  ]}>{opt.category}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.testButton}
+                onPress={() => triggerHapticForPower(selectedLinePower)}
+                activeOpacity={0.7}
+              >
+                <Volume2 size={16} color={theme.accent} />
+                <Text style={styles.testText}>Test</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleLineHapticConfirm}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.confirmText}>Start Drawing</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        ) : showLinePicker ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.powerSection}
+          >
+            <Text style={styles.powerHint}>Choose line thickness</Text>
             <View style={styles.thicknessGrid}>
               {LINE_THICKNESS_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -216,10 +284,10 @@ export default function WidgetPicker({ visible, onClose, onStartDrawing }: Widge
             </View>
             <TouchableOpacity
               style={styles.confirmButton}
-              onPress={handleLineConfirm}
+              onPress={handleLineThicknessConfirm}
               activeOpacity={0.7}
             >
-              <Text style={styles.confirmText}>Draw Line</Text>
+              <Text style={styles.confirmText}>Next</Text>
             </TouchableOpacity>
           </ScrollView>
         ) : !showPowerPicker ? (

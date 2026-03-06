@@ -18,7 +18,7 @@ import { ChevronLeft, Plus, Save, Trash2, Check, Heart, Pencil, Undo2 } from 'lu
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
-import { LineThickness, DrawPoint } from '@/types/fidget';
+import { LineThickness, DrawPoint, HapticPower } from '@/types/fidget';
 import WidgetWrapper from '@/components/widgets/WidgetWrapper';
 import WidgetPicker from '@/components/WidgetPicker';
 import DrawingCanvas from '@/components/DrawingCanvas';
@@ -28,7 +28,7 @@ export default function CreateFidgetPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { createFidget } = useSavedFidgets();
-  const { widgets, editMode, toggleEditMode, clearAllWidgets, resetWidgets, undoLastChange, canUndo, clearUndo, addDrawnLine } = useFidget();
+  const { widgets, editMode, toggleEditMode, clearAllWidgets, undoLastChange, canUndo, clearUndo, addDrawnLine } = useFidget();
   const [name, setName] = useState('');
   const [favorited, setFavorited] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -36,6 +36,7 @@ export default function CreateFidgetPage() {
   const [showNameInput, setShowNameInput] = useState(false);
   const [drawingMode, setDrawingMode] = useState(false);
   const [drawingThickness, setDrawingThickness] = useState<LineThickness>(2);
+  const [drawingHapticPower, setDrawingHapticPower] = useState<HapticPower>('medium');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -64,15 +65,16 @@ export default function CreateFidgetPage() {
     setPickerVisible(true);
   }, []);
 
-  const handleStartDrawing = useCallback((thickness: LineThickness) => {
+  const handleStartDrawing = useCallback((thickness: LineThickness, hapticPower: HapticPower) => {
     setDrawingThickness(thickness);
+    setDrawingHapticPower(hapticPower);
     setDrawingMode(true);
   }, []);
 
   const handleDrawingComplete = useCallback((points: DrawPoint[], width: number, height: number, centerX: number, centerY: number) => {
-    addDrawnLine(points, width, height, centerX, centerY, drawingThickness);
+    addDrawnLine(points, width, height, centerX, centerY, drawingThickness, drawingHapticPower);
     setDrawingMode(false);
-  }, [addDrawnLine, drawingThickness]);
+  }, [addDrawnLine, drawingThickness, drawingHapticPower]);
 
   const handleDrawingCancel = useCallback(() => {
     setDrawingMode(false);

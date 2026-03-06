@@ -82,7 +82,16 @@ export default function LineWidget({
   drawWidth = 200,
   drawHeight = 36,
 }: LineWidgetProps) {
-  const [sliderPos, setSliderPos] = useState<DrawPoint | null>(null);
+  const [sliderPos, setSliderPos] = useState<DrawPoint | null>(() => {
+    if (hasSlider && drawPoints && drawPoints.length >= 2) {
+      const randIdx = Math.floor(Math.random() * (drawPoints.length - 1));
+      const t = Math.random();
+      const a = drawPoints[randIdx];
+      const b = drawPoints[randIdx + 1];
+      return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+    }
+    return null;
+  });
   const [sliderActive, setSliderActive] = useState(false);
   const lastHapticTime = useRef(0);
   const lastMoveTime = useRef(0);
