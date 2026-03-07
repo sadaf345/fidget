@@ -37,6 +37,7 @@ export default function CreateFidgetPage() {
   const [drawingMode, setDrawingMode] = useState(false);
   const [drawingThickness, setDrawingThickness] = useState<LineThickness>(2);
   const [drawingHapticPower, setDrawingHapticPower] = useState<HapticPower>('medium');
+  const mountedRef = useRef(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -45,14 +46,18 @@ export default function CreateFidgetPage() {
   }, [fadeAnim]);
 
   useEffect(() => {
-    clearAllWidgets();
-    clearUndo();
-    if (!editMode) {
-      toggleEditMode();
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      clearAllWidgets();
+      clearUndo();
+      if (!editMode) {
+        toggleEditMode();
+      }
     }
     return () => {
       clearUndo();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCanvasLayout = useCallback((e: LayoutChangeEvent) => {

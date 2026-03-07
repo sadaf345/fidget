@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
@@ -29,17 +29,24 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     },
   });
 
+  const localUpdateRef = useRef(false);
+
   const saveMutation = useMutation({
     mutationFn: async (newWidgets: WidgetConfig[]) => {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newWidgets));
       return newWidgets;
     },
     onSuccess: (data) => {
+      localUpdateRef.current = true;
       queryClient.setQueryData(['widgets'], data);
     },
   });
 
   useEffect(() => {
+    if (localUpdateRef.current) {
+      localUpdateRef.current = false;
+      return;
+    }
     if (widgetsQuery.data) {
       setWidgets(widgetsQuery.data);
     }
@@ -196,7 +203,7 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     setEditMode(prev => !prev);
   }, []);
 
-  return {
+  return useMemo(() => ({
     widgets,
     editMode,
     isLoading: widgetsQuery.isLoading,
@@ -215,5 +222,24 @@ export const [FidgetProvider, useFidget] = createContextHook(() => {
     toggleEditMode,
     toggleWidgetLock,
     clearUndo,
-  };
+  }), [
+    widgets,
+    editMode,
+    widgetsQuery.isLoading,
+    updateWidgetPosition,
+    updateWidgetRotation,
+    updateWidgetHapticPower,
+    updateWidgetScale,
+    addWidget,
+    addDrawnLine,
+    removeWidget,
+    toggleWidgetSlider,
+    clearAllWidgets,
+    resetWidgets,
+    undoLastChange,
+    canUndo,
+    toggleEditMode,
+    toggleWidgetLock,
+    clearUndo,
+  ]);
 });
