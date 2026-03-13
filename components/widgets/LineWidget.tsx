@@ -63,6 +63,49 @@ function getClosestPointOnPath(points: DrawPoint[], tx: number, ty: number): { p
   return { point: bestPoint, index: bestIndex, t: bestT };
 }
 
+const SEARCH_RADIUS_SEGMENTS = 30;
+
+function getConstrainedPointOnPath(
+  points: DrawPoint[],
+  tx: number,
+  ty: number,
+  currentIndex: number,
+  currentT: number,
+): { point: DrawPoint; index: number; t: number } {
+  const startSeg = Math.max(0, currentIndex - SEARCH_RADIUS_SEGMENTS);
+  const endSeg = Math.min(points.length - 2, currentIndex + SEARCH_RADIUS_SEGMENTS);
+
+  let bestDist = Infinity;
+  let bestPoint: DrawPoint = points[currentIndex];
+  let bestIndex = currentIndex;
+  let bestT = currentT;
+
+  for (let i = startSeg; i <= endSeg; i++) {
+    const ax = points[i].x;
+    const ay = points[i].y;
+    const bx = points[i + 1].x;
+    const by = points[i + 1].y;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = 0;
+    if (lenSq > 0) {
+      t = Math.max(0, Math.min(1, ((tx - ax) * dx + (ty - ay) * dy) / lenSq));
+    }
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const dist = (tx - px) * (tx - px) + (ty - py) * (ty - py);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestPoint = { x: px, y: py };
+      bestIndex = i;
+      bestT = t;
+    }
+  }
+
+  return { point: bestPoint, index: bestIndex, t: bestT };
+}
+
 function getCumulativeLength(points: DrawPoint[]): number[] {
   const lengths = [0];
   for (let i = 1; i < points.length; i++) {
@@ -96,6 +139,8 @@ export default function LineWidget({
   const lastHapticTime = useRef(0);
   const lastMoveTime = useRef(0);
   const lastProgress = useRef(0);
+  const currentSegIndex = useRef(0);
+  const currentSegT = useRef(0);
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
   const hapticPowerRef = useRef(hapticPower);
@@ -132,6 +177,8 @@ export default function LineWidget({
         if (pts && pts.length >= 2) {
           const touch = evt.nativeEvent;
           const result = getClosestPointOnPath(pts, touch.locationX, touch.locationY);
+          currentSegIndex.current = result.index;
+          currentSegT.current = result.t;
           setSliderPos(result.point);
         }
       },
@@ -139,7 +186,15 @@ export default function LineWidget({
         const pts = drawPointsRef.current;
         if (!pts || pts.length < 2) return;
         const touch = evt.nativeEvent;
-        const result = getClosestPointOnPath(pts, touch.locationX, touch.locationY);
+        const result = getConstrainedPointOnPath(
+          pts,
+          touch.locationX,
+          touch.locationY,
+          currentSegIndex.current,
+          currentSegT.current,
+        );
+        currentSegIndex.current = result.index;
+        currentSegT.current = result.t;
         setSliderPos(result.point);
 
         const now = Date.now();
