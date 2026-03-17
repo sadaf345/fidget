@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "fidget",
-    "slug": "ifidget-custom-vibration",
+    "slug": "fidget",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.raison.fidget"
+      "bundleIdentifier": "com.rai.fidget"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.ifidget_custom_vibration"
+      "package": "app.rai.fidget"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
