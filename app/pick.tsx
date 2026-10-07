@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Polygon, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { playHaptic, playSequence } from '@/lib/haptics';
 import { Rumble } from '@/lib/rumble';
+import { coreHaptics } from '@/lib/coreHaptics';
 import { Bounds, bumpAt, createRng, Flake, flakeAt, makeBumps, makeFlake, outlinePoints, peelProgress, Point, snagsCrossed } from '@/lib/pick';
 import { mixColor } from '@/lib/color';
 import { usePref, useStat } from '@/hooks/useStat';
@@ -138,7 +139,9 @@ export default function PickScreen() {
 
     const detach = (peel: Peel, at: Point) => {
       const { flake, start } = peel;
-      rumble.stop();
+      // Our own build gets a short continuous rip as it tears; Expo Go just stops the tension.
+      if (coreHaptics.available) rumble.fade(0.95, 280);
+      else rumble.stop();
       playSequence([
         { at: 0, power: 'rigid' },
         { at: 16, power: 'heavy' },
@@ -203,7 +206,13 @@ export default function PickScreen() {
         touch.scanKey = key;
         if (key && now - touch.lastScanTick >= SCAN_TICK_GAP_MS) {
           touch.lastScanTick = now;
-          playHaptic(flake ? (flake.loosened > 0 ? 'medium' : 'light') : 'selection');
+          if (coreHaptics.available) {
+            // Graded texture: fine grain over bumps, a firmer edge over flakes, firmer still if lifted.
+            if (flake) coreHaptics.tap(flake.loosened > 0 ? 0.8 : 0.55, 0.75);
+            else coreHaptics.tap(0.3, 0.95);
+          } else {
+            playHaptic(flake ? (flake.loosened > 0 ? 'medium' : 'light') : 'selection');
+          }
         }
       }
 

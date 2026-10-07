@@ -39,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5bd076ca-4a8c-4086-8c9f-b0f8b3b3f83f"
+      }
+    },
+    "owner": "sadafc"
   }
 }

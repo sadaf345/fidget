@@ -15,6 +15,7 @@ import { ChevronLeft, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import ShatterBurst from '@/components/GlassShatter';
+import RumblePad from '@/components/RumblePad';
 
 interface HapticItem {
   id: string;
@@ -156,6 +157,14 @@ export default function HapticsExplorer() {
           <Text style={styles.infoText}>
             Best experienced on a physical iPhone. Web & simulator have limited support.
           </Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Continuous (Core Haptics)</Text>
+            <Text style={styles.sectionDesc}>{"The engine behind Charge's build-up and Pick's tension"}</Text>
+          </View>
+          <RumblePad />
         </View>
 
         {CATEGORIES.map((cat) => {

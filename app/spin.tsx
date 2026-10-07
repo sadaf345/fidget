@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
+import { coreHaptics } from '@/lib/coreHaptics';
 import { angleAround, angleDelta, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 import { useStat } from '@/hooks/useStat';
 import SensationHeader from '@/components/SensationHeader';
@@ -52,6 +53,7 @@ export default function SpinScreen() {
     return () => {
       clearInterval(timer);
       s.cancel?.();
+      coreHaptics.stop();
     };
   }, [s, bestMax]);
 
@@ -61,6 +63,10 @@ export default function SpinScreen() {
       s.velocity = velocity;
       rotation.setValue(deg);
       blur.setValue(Math.min(1, Math.abs(velocity) / 3));
+      // Our own build adds the bearing's whir: louder and higher as it spins faster.
+      const speed = Math.abs(velocity);
+      if (speed > 0.15) coreHaptics.set(Math.min(0.6, 0.1 + speed * 0.12), Math.min(0.9, 0.25 + speed * 0.11));
+      else coreHaptics.stop();
 
       const tick = Math.floor(deg / TICK_DEG);
       if (tick !== s.lastTick) {
@@ -83,6 +89,7 @@ export default function SpinScreen() {
       s.cancel = null;
       s.velocity = 0;
       blur.setValue(0);
+      coreHaptics.stop();
     };
 
     return PanResponder.create({
@@ -110,6 +117,7 @@ export default function SpinScreen() {
         if (Math.abs(v) < MIN_FLICK) {
           s.velocity = 0;
           blur.setValue(0);
+          coreHaptics.stop();
           return;
         }
         playHaptic('medium');
@@ -126,11 +134,13 @@ export default function SpinScreen() {
             s.cancel = null;
             s.velocity = 0;
             blur.setValue(0);
+            coreHaptics.stop();
           },
         });
       },
       onPanResponderTerminate: () => {
         s.velocity = 0;
+        coreHaptics.stop();
       },
     });
   }, [s, rotation, blur, center, addTurns]);

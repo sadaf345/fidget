@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { View } from "react-native";
 import { SavedFidgetProvider } from "@/contexts/SavedFidgetContext";
 import { theme } from "@/constants/colors";
+import { CoreHapticsBridge } from "@/lib/coreHaptics";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -33,6 +34,7 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <CoreHapticsBridge />
       <SavedFidgetProvider>
         <RootLayoutNav />
       </SavedFidgetProvider>

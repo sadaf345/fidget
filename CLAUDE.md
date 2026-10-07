@@ -9,13 +9,16 @@ Rai Industries' haptic fidget board app for iPhone (Expo SDK 57, React Native, E
 - `npx expo install <pkg>`: always use this, not plain `npm install`, for anything with native code, so versions match the SDK.
 
 ## How we test
-- The founder tests feel on a real iPhone through Expo Go (`npm start`, scan QR). Haptics can't be verified any other way, so when a change affects feel, say what to try on the phone.
-- Xcode is not installed on this Mac (only Command Line Tools), so there's no simulator and no local native builds. TestFlight builds go through EAS (`npm run testflight`).
+- The founder tests feel on a real iPhone in the **development build** (`npm start`, scan QR), which includes Core Haptics. `npm run start:go` uses Expo Go instead, with tap-only haptics. Haptics can't be verified any other way, so when a change affects feel, say what to try on the phone.
+- Xcode is not installed on this Mac (only Command Line Tools), so there's no simulator and no local native builds. All native builds go through EAS: `npm run build:dev` (development build, internal distribution) and `npm run testflight`. EAS project: `@sadafc/fidget`.
+- A new native dependency, SDK upgrade, or `app.json` change needs a fresh `npm run build:dev` before the founder can test it. JS-only changes don't.
 - Keep pure logic in `lib/` with tests in `lib/__tests__/`; widgets stay thin.
 - You can see layouts yourself: run `npm run web -- --port 8099` in the background, `npm i --no-save playwright-core`, then `node scripts/screenshot.mjs /pick out.png "down:195,300" "move:260,300,8" "up"` and read the PNG. It drives the installed Google Chrome at 390x844. Haptics don't exist on web, and `useNativeDriver` falls back to JS there.
 
 ## Conventions
-- Fire haptics through `playHaptic()` / `playSequence()` in `lib/haptics.ts`. Anything that should feel continuous (rising tension, a build-up) uses `Rumble` in `lib/rumble.ts`; it's the single place to swap in Core Haptics (e.g. `react-native-pulsar`) once the app moves from Expo Go to its own dev build.
+- Fire system taps through `playHaptic()` / `playSequence()` in `lib/haptics.ts`. Anything that should feel continuous (rising tension, a build-up) uses `Rumble` in `lib/rumble.ts`, which plays a Core Haptics swell when `coreHaptics.available` and falls back to accelerating taps otherwise. Every Core Haptics feature must keep a tap fallback, because Expo Go and the web preview lack the native module.
+- Never import `react-native-pulsar` statically; it throws without its native module. Go through `lib/coreHaptics.tsx`, which checks first.
+- `react-native-reanimated` is pinned to the SDK's version on purpose: expo-router pulls in the newest one otherwise, whose `react-native-worklets` requirement conflicts with Pulsar's and the SDK's.
 - Product context: this is a substitute for body-focused repetitive behaviors (skin/scalp picking, stimming). Sensations should reward repetition (counters, combos, regrowth) and never run out.
 - Swipe-back is disabled app-wide on purpose (`gestureEnabled: false` in `app/_layout.tsx`); every screen needs a visible back button.
 - Board state goes through `boardReducer` in `lib/board.ts`. Each screen mounts its own `FidgetProvider`; never share one board between screens.

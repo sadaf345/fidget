@@ -58,8 +58,11 @@ export function chargeIntensity(level: number): number {
   return level <= 0.001 ? 0 : 0.12 + 0.88 * Math.pow(clamp01(level), 1.4);
 }
 
-/** The release: a crackling burst, a success thump, then aftershocks fading out. Repeats in one hold crack harder. */
-export function climaxPattern(combo: number): HapticStep[] {
+/**
+ * The release: a crackling burst, a success thump, then aftershocks fading out. Repeats in one hold crack harder.
+ * Pass withAftershocks=false when a continuous fade (Core Haptics) plays the aftershocks instead.
+ */
+export function climaxPattern(combo: number, withAftershocks = true): HapticStep[] {
   const extraCracks = Math.min(Math.max(combo - 1, 0), 4);
   const lead: HapticStep[] = Array.from({ length: extraCracks }, (_, i) => ({ at: i * 24, power: 'rigid' as const }));
   const offset = extraCracks * 24;
@@ -75,7 +78,8 @@ export function climaxPattern(combo: number): HapticStep[] {
     { at: 800, power: 'soft' },
     { at: 1100, power: 'soft' },
   ];
-  return [...lead, ...burst.map(step => ({ ...step, at: step.at + offset }))];
+  const steps = withAftershocks ? burst : burst.filter(step => step.at <= 105);
+  return [...lead, ...steps.map(step => ({ ...step, at: step.at + offset }))];
 }
 
 export const RELEASE_PATTERN: HapticStep[] = [

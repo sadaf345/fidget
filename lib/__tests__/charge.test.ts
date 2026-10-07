@@ -1,5 +1,5 @@
 import { AFTERGLOW_MS, chargeIntensity, climaxPattern, initialCharge, REARM_LEVEL, stepCharge, ChargeState } from '@/lib/charge';
-import { rumbleGapMs, rumbleTap } from '@/lib/rumble';
+import { rumbleBeat, rumbleGapMs, rumbleTap, rumbleWave } from '@/lib/rumble';
 
 const FRAME = 16.67;
 
@@ -63,5 +63,22 @@ describe('haptic shaping', () => {
     expect(climaxPattern(3).length).toBeGreaterThan(climaxPattern(1).length);
     const times = climaxPattern(3).map(s => s.at);
     expect([...times].sort((a, b) => a - b)).toEqual(times);
+  });
+});
+
+describe('continuous rumble shaping', () => {
+  it('swells stronger and sharper as intensity rises', () => {
+    const low = rumbleWave(0.1);
+    const high = rumbleWave(0.9);
+    expect(high.amplitude).toBeGreaterThan(low.amplitude);
+    expect(high.frequency).toBeGreaterThan(low.frequency);
+    expect(rumbleBeat(1).amplitude).toBeLessThanOrEqual(1);
+  });
+
+  it('a climax with continuous aftershocks keeps only the burst', () => {
+    const tapsOnly = climaxPattern(1, true);
+    const withFade = climaxPattern(1, false);
+    expect(withFade.length).toBeLessThan(tapsOnly.length);
+    expect(withFade[withFade.length - 1].power).toBe('success');
   });
 });

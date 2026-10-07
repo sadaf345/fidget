@@ -3,6 +3,7 @@ import { Animated, Easing, PanResponder, PanResponderInstance } from 'react-nati
 import { HapticPower } from '@/types/fidget';
 import { playHaptic, playSequence } from '@/lib/haptics';
 import { Rumble } from '@/lib/rumble';
+import { coreHaptics } from '@/lib/coreHaptics';
 import { angleAround, angleDelta } from '@/lib/spin';
 import { ChargeState, chargeIntensity, climaxPattern, initialCharge, RELEASE_PATTERN, stepCharge } from '@/lib/charge';
 
@@ -77,16 +78,19 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
       charge.setValue(result.state.level);
 
       if (result.climaxed) {
-        engine.rumble?.set(0);
+        // With Core Haptics the aftershocks are one continuous wave dying away; with taps
+        // it's silence plus discrete aftershocks from the pattern.
+        const continuous = coreHaptics.available;
+        if (continuous) engine.rumble?.fade(1, 750);
+        else engine.rumble?.set(0);
         engine.cancelSequence?.();
-        engine.cancelSequence = playSequence(climaxPattern(result.state.combo));
+        engine.cancelSequence = playSequence(climaxPattern(result.state.combo, !continuous));
         climax.setValue(0);
         Animated.timing(climax, { toValue: 1, duration: 750, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
         setCombo(result.state.combo);
         optionsRef.current.onClimax?.(result.state.combo);
-      } else {
-        // Silence during the afterglow makes the climax land harder.
-        engine.rumble?.set(result.state.afterglowMs > 0 ? 0 : chargeIntensity(result.state.level));
+      } else if (result.state.afterglowMs === 0) {
+        engine.rumble?.set(chargeIntensity(result.state.level));
       }
       engine.frame = requestAnimationFrame(tick);
     };
@@ -99,7 +103,8 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
     const end = () => {
       if (engine.frame !== null) cancelAnimationFrame(engine.frame);
       engine.frame = null;
-      engine.rumble?.stop();
+      // Letting go right after a climax shouldn't cut the aftershocks off.
+      if (engine.state.afterglowMs === 0) engine.rumble?.stop();
       if (engine.state.level > 0.2 && engine.state.afterglowMs === 0) {
         engine.cancelSequence?.();
         engine.cancelSequence = playSequence(RELEASE_PATTERN);
