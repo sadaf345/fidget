@@ -78,8 +78,10 @@ export function makeFlake(rng: Rng, id: number, bounds: Bounds, avoid: Flake[] =
     const radius = size * between(rng, 0.55, 1);
     return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
   });
-  const resistance = 30 + size * 2.2 + between(rng, 0, 20);
-  const snags = size > 14 ? (rng() > 0.5 ? [0.38, 0.72] : [0.55]) : rng() > 0.6 ? [0.5] : [];
+  // A long pull (roughly 120–220 pt) with several snags along the way, so each flake
+  // takes a while to work free and keeps paying out small releases as it goes.
+  const resistance = 80 + size * 4.5 + between(rng, 0, 40);
+  const snags = size > 16 ? [0.22, 0.45, 0.68, 0.86] : size > 12 ? [0.3, 0.58, 0.82] : [0.4, 0.75];
   return { id, x, y, size, outline, edgeAngle: between(rng, 0, 360), resistance, loosened: 0, snags };
 }
 

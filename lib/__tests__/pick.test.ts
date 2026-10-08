@@ -30,6 +30,15 @@ describe('makeFlake', () => {
     }
   });
 
+  it('takes a long pull with several snags to tear free', () => {
+    const rng = createRng(9);
+    for (let i = 0; i < 100; i++) {
+      const f = makeFlake(rng, i, bounds);
+      expect(f.resistance).toBeGreaterThanOrEqual(120);
+      expect(f.snags.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
   it('is reproducible from a seed', () => {
     expect(makeFlake(createRng(42), 1, bounds)).toEqual(makeFlake(createRng(42), 1, bounds));
   });

@@ -151,7 +151,7 @@ export default function PickScreen() {
       const dy = at.y - start.y;
       const len = Math.hypot(dx, dy) || 1;
       // Where the flake had stretched to when it tore free (the peel's follow factor at full progress).
-      const reach = 0.47;
+      const reach = 0.35;
       const id = nextId.current++;
       setFlying(prev => [...prev, { id, flake, x: flake.x + dx * reach, y: flake.y + dy * reach, dir: { x: dx / len, y: dy / len } }]);
       setMarks(prev => [...prev, { id, x: flake.x, y: flake.y, size: flake.size }]);
@@ -179,7 +179,7 @@ export default function PickScreen() {
       rumble.set(0.1 + 0.85 * Math.pow(progress, 1.3));
       lift.setValue(progress);
       // The flake stretches toward the finger as it loosens.
-      const follow = 0.12 + 0.35 * progress;
+      const follow = 0.1 + 0.25 * progress;
       offsetX.setValue((at.x - peel.start.x) * follow);
       offsetY.setValue((at.y - peel.start.y) * follow);
     };
