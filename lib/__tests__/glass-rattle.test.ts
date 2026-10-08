@@ -1,5 +1,7 @@
 import { crackNetwork, distanceToEdge } from '@/lib/glass';
 import { beadAcceleration, Bead, flick, stepRattle } from '@/lib/rattle';
+import { detentIntensity } from '@/lib/spin';
+import { teethPerSecond, toothIntensity, toothSpread } from '@/lib/zipper';
 
 describe('crackNetwork', () => {
   const W = 358;
@@ -75,5 +77,26 @@ describe('rattle physics', () => {
     flick(beads, 100, 100, 120, 1000);
     expect(beads[0].vx).toBeGreaterThan(0);
     expect(beads[1].vx).toBe(0);
+  });
+});
+
+describe('drag toys', () => {
+
+  it('dial clicks harder when spun faster, within the spec range', () => {
+    expect(detentIntensity(0)).toBeCloseTo(0.5);
+    expect(detentIntensity(5)).toBeCloseTo(0.8);
+    expect(detentIntensity(-0.75)).toBeGreaterThan(0.5);
+  });
+
+  it('zipper teeth click 0.5-0.9 with speed, and blur into a buzz when fast', () => {
+    expect(toothIntensity(0)).toBeCloseTo(0.5);
+    expect(toothIntensity(3)).toBeCloseTo(0.9);
+    expect(teethPerSecond(1)).toBeGreaterThan(45);
+  });
+
+  it('teeth below the pull stay meshed; behind it they spread, capped', () => {
+    expect(toothSpread(300, 200, 70)).toBe(0);
+    expect(toothSpread(150, 200, 70)).toBeGreaterThan(0);
+    expect(toothSpread(0, 1000, 70)).toBe(70);
   });
 });

@@ -66,3 +66,8 @@ export function startMomentum({ velocity, friction, minVelocity, onStep, onEnd }
     frame = null;
   };
 }
+
+/** Ratchet dial click strength: 0.5 when turning slowly, up to 0.8 when spun fast (degrees per ms). */
+export function detentIntensity(degPerMs: number): number {
+  return 0.5 + 0.3 * Math.min(1, Math.abs(degPerMs) / 1.5);
+}

@@ -37,8 +37,9 @@ export function useStat(key: string) {
 
   const add = useCallback((n = 1) => update(prev => prev + n), [update]);
   const max = useCallback((n: number) => update(prev => Math.max(prev, n)), [update]);
+  const set = useCallback((n: number) => update(() => n), [update]);
 
-  return { value, add, max };
+  return { value, add, max, set };
 }
 
 /** A small saved preference, like the chosen skin tone. */
