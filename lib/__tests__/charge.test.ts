@@ -1,5 +1,6 @@
 import { AFTERGLOW_MS, chargeIntensity, climaxPattern, initialCharge, REARM_LEVEL, stepCharge, ChargeState } from '@/lib/charge';
 import { rumbleBeat, rumbleGapMs, rumbleTap, rumbleWave } from '@/lib/rumble';
+import { fromAhap, MAX_RECORDING_MS, toAhap } from '@/lib/patterns';
 
 const FRAME = 16.67;
 
@@ -80,5 +81,22 @@ describe('continuous rumble shaping', () => {
     const withFade = climaxPattern(1, false);
     expect(withFade.length).toBeLessThan(tapsOnly.length);
     expect(withFade[withFade.length - 1].power).toBe('success');
+  });
+});
+
+describe('recorded patterns', () => {
+  it('round-trips through AHAP, starting at the first tap and capped at 5 s', () => {
+    const events = [
+      { time: 1000, intensity: 0.8, sharpness: 0.4 },
+      { time: 1250, intensity: 0.5, sharpness: 0.9 },
+      { time: 1000 + MAX_RECORDING_MS + 100, intensity: 1, sharpness: 1 },
+    ];
+    const ahap = toAhap(events);
+    expect(ahap.Version).toBe(1);
+    expect(ahap.Pattern[0].Event.EventType).toBe('HapticTransient');
+    expect(fromAhap(ahap)).toEqual([
+      { time: 0, intensity: 0.8, sharpness: 0.4 },
+      { time: 250, intensity: 0.5, sharpness: 0.9 },
+    ]);
   });
 });

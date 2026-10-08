@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import GlassCracks from '@/components/GlassCracks';
 import { crackNetwork, CrackLine } from '@/lib/glass';
-import RumblePad from '@/components/RumblePad';
+import CustomLab from '@/components/CustomLab';
 
 interface HapticItem {
   id: string;
@@ -184,14 +184,6 @@ export default function HapticsExplorer() {
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continuous (Core Haptics)</Text>
-            <Text style={styles.sectionDesc}>{"The engine behind Charge's build-up and Pick's tension"}</Text>
-          </View>
-          <RumblePad onActiveChange={setPadActive} />
-        </View>
-
         {CATEGORIES.map((cat) => {
           const items = hapticItems.filter((h) => h.category === cat.key);
           return (
@@ -208,6 +200,13 @@ export default function HapticsExplorer() {
             </View>
           );
         })}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Custom</Text>
+            <Text style={styles.sectionDesc}>Dial in your own vibration, then record it as a pattern</Text>
+          </View>
+          <CustomLab onPadActive={setPadActive} />
+        </View>
       </ScrollView>
     </View>
   );
