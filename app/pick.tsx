@@ -8,7 +8,7 @@ import { coreHaptics } from '@/lib/coreHaptics';
 import { Bounds, bumpAt, createRng, Flake, flakeAt, makeBumps, makeFlake, outlinePoints, peelProgress, Point, snagsCrossed } from '@/lib/pick';
 import { mixColor } from '@/lib/color';
 import { usePref, useStat } from '@/hooks/useStat';
-import SensationHeader from '@/components/SensationHeader';
+import ToyChrome from '@/components/ToyChrome';
 
 const TONES = ['#F3D5C0', '#E5B898', '#C99674', '#A2704F', '#7A4E35', '#4F3324', '#B9B4C9'];
 const START_FLAKES = 12;
@@ -281,7 +281,6 @@ export default function PickScreen() {
         {flying.map(f => <FlyingFlake key={f.id} item={f} colors={colors} onDone={removeFlying} />)}
       </View>
 
-      <SensationHeader title="Pick" stat={`${pickedCount} picked`} tone={isLight(tone) ? 'dark' : 'light'} />
 
       {hintVisible && (
         <View pointerEvents="none" style={[styles.hint, { bottom: insets.bottom + 88 }]}>
@@ -302,6 +301,7 @@ export default function PickScreen() {
           />
         ))}
       </View>
+      <ToyChrome toyId="pick" stat={`${pickedCount} picked`} tone={isLight(tone) ? 'dark' : 'light'} />
     </View>
   );
 }

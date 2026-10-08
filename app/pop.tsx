@@ -7,7 +7,7 @@ import { playHaptic, playSequence } from '@/lib/haptics';
 import { cellAt, layoutGrid } from '@/lib/pop';
 import { mixColor } from '@/lib/color';
 import { useStat } from '@/hooks/useStat';
-import SensationHeader from '@/components/SensationHeader';
+import ToyChrome from '@/components/ToyChrome';
 
 const ROW_COLORS = ['#FF6B6B', '#FF9F43', '#FECA57', '#A3E635', '#1DD1A1', '#2ED3D3', '#54A0FF', '#7C6CF2', '#FF7EC8'];
 const SIDE_MARGIN = 16;
@@ -109,7 +109,6 @@ export default function PopScreen() {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
-      <SensationHeader title="Pop" stat={`${pops} pops`} />
 
       <View style={[styles.stage, { paddingTop: insets.top + 64 }]}>
         <Animated.View
@@ -153,6 +152,7 @@ export default function PopScreen() {
           <Text style={styles.flipText}>Flip</Text>
         </Pressable>
       </View>
+      <ToyChrome toyId="pop" stat={`${pops} pops`} />
     </View>
   );
 }

@@ -6,7 +6,7 @@ import { theme } from '@/constants/colors';
 import { useCharge } from '@/hooks/useCharge';
 import { useStat } from '@/hooks/useStat';
 import ChargeOrb from '@/components/ChargeOrb';
-import SensationHeader from '@/components/SensationHeader';
+import ToyChrome from '@/components/ToyChrome';
 
 const COLOR = theme.accent;
 
@@ -44,7 +44,6 @@ export default function ChargeScreen() {
       </Animated.View>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flashOpacity }]} />
 
-      <SensationHeader title="Charge" stat={`${releases.value} ${releases.value === 1 ? 'release' : 'releases'}`} />
 
       <View style={styles.center}>
         <ChargeOrb size={orbSize} handle={handle} color={COLOR} showCombo={false} />
@@ -64,6 +63,7 @@ export default function ChargeScreen() {
         <Text style={styles.hint}><Text style={styles.hintStrong}>Circle back</Text> to hold off the edge</Text>
         <Text style={styles.hint}><Text style={styles.hintStrong}>Keep holding</Text> after the release to go again</Text>
       </View>
+      <ToyChrome toyId="charge" stat={`${releases.value} ${releases.value === 1 ? 'release' : 'releases'}`} />
     </View>
   );
 }

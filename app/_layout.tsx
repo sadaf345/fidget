@@ -1,10 +1,12 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
 import { SavedFidgetProvider } from "@/contexts/SavedFidgetContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import { theme } from "@/constants/colors";
 import { CoreHapticsBridge } from "@/lib/coreHaptics";
+import { stopAllHaptics } from "@/lib/hapticState";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -14,15 +16,6 @@ function RootLayoutNav() {
     // mid-fidget shouldn't yank you out. Every screen has a back button instead.
     <Stack screenOptions={{ headerShown: false, gestureEnabled: false, contentStyle: { backgroundColor: theme.bg } }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="pick" />
-      <Stack.Screen name="pop" />
-      <Stack.Screen name="charge" />
-      <Stack.Screen name="spin" />
-      <Stack.Screen name="shake" />
-      <Stack.Screen name="playground" />
-      <Stack.Screen name="create" />
-      <Stack.Screen name="my-widgets" />
-      <Stack.Screen name="fidget/[id]" />
       <Stack.Screen name="haptics" options={{ presentation: 'modal' }} />
     </Stack>
   );
@@ -31,14 +24,21 @@ function RootLayoutNav() {
 export default function RootLayout() {
   useEffect(() => {
     SplashScreen.hideAsync();
+    // No vibration may outlive the app being on screen.
+    const sub = AppState.addEventListener('change', state => {
+      if (state !== 'active') stopAllHaptics();
+    });
+    return () => sub.remove();
   }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <CoreHapticsBridge />
-      <SavedFidgetProvider>
-        <RootLayoutNav />
-      </SavedFidgetProvider>
+      <SettingsProvider>
+        <SavedFidgetProvider>
+          <RootLayoutNav />
+        </SavedFidgetProvider>
+      </SettingsProvider>
     </View>
   );
 }

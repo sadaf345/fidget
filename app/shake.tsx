@@ -10,7 +10,9 @@ import { coreHaptics } from '@/lib/coreHaptics';
 import { mixColor } from '@/lib/color';
 import { beadAcceleration, Bead, flick, Impact, stepRattle } from '@/lib/rattle';
 import { useStat } from '@/hooks/useStat';
-import SensationHeader from '@/components/SensationHeader';
+import { useToyOption } from '@/contexts/SettingsContext';
+import Slider from '@/components/ui/Slider';
+import ToyChrome from '@/components/ToyChrome';
 
 type AccelerometerApi = typeof import('expo-sensors').Accelerometer;
 
@@ -24,7 +26,9 @@ function loadAccelerometer(): AccelerometerApi | null {
 const accelerometer = loadAccelerometer();
 
 const BEAD_COLORS = ['#FF6B6B', '#FECA57', '#1DD1A1', '#54A0FF', '#A78BFA', '#FF7EC8', '#FF9F43', '#2ED3D3'];
-const BEAD_COUNT = 14;
+// Marble tray: 5-12 marbles, adjustable in the toy's settings.
+const MAX_MARBLES = 12;
+const DEFAULT_MARBLES = 10;
 // About a sixth of real-world scale: shakes visibly throw the beads without them teleporting.
 const POINTS_PER_G = 5000;
 // Hits slower than this (points/s) are beads settling, not worth a vibration.
@@ -38,10 +42,10 @@ const JAR_BORDER = 2;
 
 const beadRadius = (i: number) => 14 + ((i * 7) % 6);
 
-function makeBeads(width: number, height: number): Bead[] {
+function makeBeads(width: number, height: number, count: number): Bead[] {
   const beads: Bead[] = [];
   const cols = 5;
-  for (let i = 0; i < BEAD_COUNT; i++) {
+  for (let i = 0; i < count; i++) {
     const r = beadRadius(i);
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -54,9 +58,10 @@ export default function ShakeScreen() {
   const insets = useSafeAreaInsets();
   const [jar, setJar] = useState({ width: 0, height: 0 });
   const { value: shakeCount, add: addShakes } = useStat('shake.shakes');
+  const [marbles, setMarbles] = useToyOption<number>('shake', 'marbles', DEFAULT_MARBLES);
 
   const beads = useRef<Bead[]>([]);
-  const positions = useRef(Array.from({ length: BEAD_COUNT }, () => new Animated.ValueXY({ x: -100, y: -100 }))).current;
+  const positions = useRef(Array.from({ length: MAX_MARBLES }, () => new Animated.ValueXY({ x: -100, y: -100 }))).current;
   const reading = useRef({ x: 0, y: -1, z: 0 });
   const lastHit = useRef(0);
   const lastShake = useRef(0);
@@ -67,8 +72,8 @@ export default function ShakeScreen() {
   }, []);
 
   useEffect(() => {
-    if (jar.width > 0) beads.current = makeBeads(jar.width, jar.height);
-  }, [jar]);
+    if (jar.width > 0) beads.current = makeBeads(jar.width, jar.height, marbles);
+  }, [jar, marbles]);
 
   // Physics, sensor and haptics only run while this screen is in front.
   useFocusEffect(useCallback(() => {
@@ -94,8 +99,8 @@ export default function ShakeScreen() {
       lastHit.current = now;
       const force = Math.min(1, (strongest.speed - MIN_HIT_SPEED) / 1600);
       if (coreHaptics.available) {
-        // Walls thud (low sharpness), beads click against each other (high sharpness).
-        coreHaptics.tap(0.25 + 0.75 * force, strongest.kind === 'wall' ? 0.45 : 0.95);
+        // Intensity follows the impact (0.1-1); marble-on-marble clicks are sharper than wall hits.
+        coreHaptics.tap(Math.max(0.1, force), strongest.kind === 'wall' ? 0.6 : 0.9);
       } else if (strongest.kind === 'wall') {
         playHaptic(force > 0.6 ? 'heavy' : force > 0.25 ? 'medium' : 'light');
       } else {
@@ -146,15 +151,18 @@ export default function ShakeScreen() {
     });
   }, []);
 
+  const shakeOptions = (
+    <Slider label="Marbles" value={marbles} min={5} max={MAX_MARBLES} step={1} format={v => String(Math.round(v))} onChange={v => setMarbles(Math.round(v))} />
+  );
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
-      <SensationHeader title="Shake" stat={`${shakeCount} ${shakeCount === 1 ? 'shake' : 'shakes'}`} />
 
       <View style={[styles.stage, { paddingTop: insets.top + 64, paddingBottom: insets.bottom + 76 }]}>
         <View style={styles.jar}>
           <View style={styles.jarInner} onLayout={handleLayout} {...panResponder.panHandlers}>
-            {jar.width > 0 && positions.map((pos, i) => {
+            {jar.width > 0 && positions.slice(0, marbles).map((pos, i) => {
               const r = beadRadius(i);
               return (
                 <Animated.View key={i} pointerEvents="none" style={[styles.bead, { width: r * 2, height: r * 2, transform: pos.getTranslateTransform() }]}>
@@ -175,6 +183,7 @@ export default function ShakeScreen() {
           <Text style={styles.subHint}>Shaking needs the newest build of the app.</Text>
         )}
       </View>
+      <ToyChrome toyId="shake" stat={`${shakeCount} ${shakeCount === 1 ? 'shake' : 'shakes'}`} options={shakeOptions} />
     </View>
   );
 }

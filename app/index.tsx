@@ -1,35 +1,28 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, StatusBar, Animated, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, StatusBar, Animated, ScrollView, useWindowDimensions, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { ChevronRight, FolderOpen, Gamepad2, Plus, Zap } from 'lucide-react-native';
+import { ChevronRight, FolderOpen, Gamepad2, Plus, Settings2, Star, Zap } from 'lucide-react-native';
 import { theme } from '@/constants/colors';
+import { CATEGORIES, Toy, ToyIcon, TOYS, TOYS_BY_ID } from '@/constants/toys';
 import { playHaptic } from '@/lib/haptics';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
-import { ChargeArt, PickArt, PopArt, ShakeArt, SpinArt } from '@/components/home/SensationArt';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-const SENSATIONS = [
-  { route: '/pick', title: 'Pick', line: 'Find a rough spot. Peel it off.', color: '#E8A87C', Art: () => <PickArt /> },
-  { route: '/pop', title: 'Pop', line: 'A pop-it that never runs out.', color: '#FF7EC8', Art: () => <PopArt /> },
-  { route: '/charge', title: 'Charge', line: 'Hold. Build. Release.', color: theme.accent, Art: () => <ChargeArt color={theme.accent} /> },
-  { route: '/spin', title: 'Spin', line: 'Flick it and let it coast.', color: '#A78BFA', Art: () => <SpinArt color="#A78BFA" /> },
-  { route: '/shake', title: 'Shake', line: 'Rattle the jar. Feel every bead.', color: '#38BDF8', Art: () => <ShakeArt color="#38BDF8" />, wide: true },
-] as const;
+const TILE_HEIGHT = 156;
+const GAP = 12;
+const SIDE = 20;
 
-// Every square tile reserves room for a two-line description, so the gap between
-// the icon and the title is identical whether the description wraps or not.
-const TILE_HEIGHT = 166;
-const WIDE_TILE_HEIGHT = 96;
-
-/** Fades and slides children in after `delay` ms. */
+/** Fades and slides children in after `delay` ms (just fades with Reduce Motion on). */
 function Entrance({ delay, children }: { delay: number; children: React.ReactNode }) {
   const t = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
   useEffect(() => {
     Animated.timing(t, { toValue: 1, duration: 450, delay, useNativeDriver: true }).start();
   }, [t, delay]);
   return (
-    <Animated.View style={{ opacity: t, transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>
+    <Animated.View style={{ opacity: t, transform: reduced ? [] : [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>
       {children}
     </Animated.View>
   );
@@ -57,37 +50,37 @@ function useTactile() {
   };
 }
 
-function SensationTile({ title, line, color, Art, onPress, width, wide = false }: {
-  title: string;
-  line: string;
-  color: string;
-  Art: () => React.ReactElement;
-  onPress: () => void;
+function ToyTile({ toy, width, favorite, onOpen, onToggleFavorite }: {
+  toy: Toy;
   width: number;
-  wide?: boolean;
+  favorite: boolean;
+  onOpen: () => void;
+  onToggleFavorite: () => void;
 }) {
   const { scale, onPressIn, onPressOut } = useTactile();
-  const height = wide ? WIDE_TILE_HEIGHT : TILE_HEIGHT;
   return (
     <Animated.View style={{ width, transform: [{ scale }] }}>
-      <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Pressable
+        onPress={onOpen}
+        onLongPress={onToggleFavorite}
+        delayLongPress={380}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel={`${toy.title}. ${toy.line}${favorite ? '. Favorite' : ''}`}
+        accessibilityHint="Opens the toy. Long-press to add or remove from favorites."
+        accessibilityActions={[{ name: 'longpress', label: favorite ? 'Remove from favorites' : 'Add to favorites' }]}
+        onAccessibilityAction={e => e.nativeEvent.actionName === 'longpress' && onToggleFavorite()}
+      >
         {({ pressed }) => (
-          <View style={[styles.tile, { height }, wide && styles.tileWide, pressed && { borderColor: color }]}>
-            <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Defs>
-                <RadialGradient id={`glow-${title}`} cx="85%" cy="10%" r="80%">
-                  <Stop offset="0" stopColor={color} stopOpacity={pressed ? 0.4 : 0.22} />
-                  <Stop offset="1" stopColor={color} stopOpacity={0} />
-                </RadialGradient>
-              </Defs>
-              <Rect width={width} height={height} fill={`url(#glow-${title})`} />
-            </Svg>
-            <View style={styles.tileArt}>
-              <Art />
+          <View style={[styles.tile, pressed && { borderColor: toy.color }]}>
+            <View style={styles.tileTop}>
+              <ToyIcon toy={toy} />
+              {favorite && <Star size={16} color="#FBBF24" fill="#FBBF24" />}
             </View>
-            <View style={wide ? styles.tileTextWide : styles.tileText}>
-              <Text style={styles.tileTitle}>{title}</Text>
-              <Text style={styles.tileLine} numberOfLines={2}>{line}</Text>
+            <View style={styles.tileText}>
+              <Text style={styles.tileTitle} numberOfLines={1} maxFontSizeMultiplier={1.3}>{toy.title}</Text>
+              <Text style={styles.tileLine} numberOfLines={2} maxFontSizeMultiplier={1.3}>{toy.line}</Text>
             </View>
           </View>
         )}
@@ -100,13 +93,13 @@ function BuildRow({ icon, title, subtitle, onPress }: { icon: React.ReactNode; t
   const { scale, onPressIn, onPressOut } = useTactile();
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} accessibilityRole="button" accessibilityLabel={`${title}. ${subtitle}`}>
         {({ pressed }) => (
           <View style={[styles.row, pressed && styles.rowPressed]}>
             <View style={styles.rowIcon}>{icon}</View>
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>{title}</Text>
-              <Text style={styles.rowSubtitle}>{subtitle}</Text>
+              <Text style={styles.rowTitle} maxFontSizeMultiplier={1.4}>{title}</Text>
+              <Text style={styles.rowSubtitle} maxFontSizeMultiplier={1.4}>{subtitle}</Text>
             </View>
             <ChevronRight size={18} color={theme.textMuted} />
           </View>
@@ -121,74 +114,107 @@ export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { fidgets } = useSavedFidgets();
-  const tileWidth = (Math.min(width, 520) - 20 * 2 - 12) / 2;
+  const { settings, toggleFavorite } = useSettings();
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tileWidth = (Math.min(width, 520) - SIDE * 2 - GAP) / 2;
 
   const go = (route: string) => router.push(route as any);
-  const boardCount = fidgets.length;
+
+  const favorite = useCallback((toy: Toy) => {
+    const adding = !settings.favorites.includes(toy.id);
+    playHaptic(adding ? 'success' : 'medium');
+    toggleFavorite(toy.id);
+    const message = adding ? `${toy.title} added to favorites` : `${toy.title} removed from favorites`;
+    setToast(message);
+    AccessibilityInfo.announceForAccessibility(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 1800);
+  }, [settings.favorites, toggleFavorite]);
+
+  const favorites = settings.favorites.map(id => TOYS_BY_ID[id]).filter(Boolean);
+
+  const tile = (toy: Toy) => (
+    <ToyTile
+      key={toy.id}
+      toy={toy}
+      width={tileWidth}
+      favorite={settings.favorites.includes(toy.id)}
+      onOpen={() => go(toy.route)}
+      onToggleFavorite={() => favorite(toy)}
+    />
+  );
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 28 }]}
         showsVerticalScrollIndicator={false}
       >
         <Entrance delay={0}>
           <View style={styles.brandRow}>
-            <Text style={styles.brand}>fidget</Text>
-            <View style={styles.brandDot} />
+            <View>
+              <View style={styles.brandMark}>
+                <Text style={styles.brand} accessibilityRole="header">fidget</Text>
+                <View style={styles.brandDot} />
+              </View>
+              <Text style={styles.tagline}>something for your hands</Text>
+            </View>
+            <Pressable
+              onPress={() => go('/settings')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              style={({ pressed }) => [styles.gear, pressed && { opacity: 0.6 }]}
+            >
+              <Settings2 size={20} color={theme.textSecondary} />
+            </Pressable>
           </View>
-          <Text style={styles.tagline}>something for your hands</Text>
         </Entrance>
 
-        <Entrance delay={100}>
-          <Text style={styles.section}>Feel</Text>
-          <View style={styles.grid}>
-            {SENSATIONS.map(s => (
-              <SensationTile
-                key={s.title}
-                {...s}
-                width={'wide' in s && s.wide ? tileWidth * 2 + 12 : tileWidth}
-                onPress={() => go(s.route)}
-              />
-            ))}
-          </View>
+        <Entrance delay={80}>
+          <Text style={styles.section}>Favorites</Text>
+          {favorites.length > 0 ? (
+            <View style={styles.grid}>{favorites.map(tile)}</View>
+          ) : (
+            <View style={styles.emptyFavorites}>
+              <Star size={16} color={theme.textMuted} />
+              <Text style={styles.emptyText}>Long-press any toy to pin it here.</Text>
+            </View>
+          )}
         </Entrance>
 
-        <Entrance delay={220}>
+        {CATEGORIES.map((category, i) => (
+          <Entrance key={category.id} delay={140 + i * 50}>
+            <Text style={styles.section}>{category.title}</Text>
+            <View style={styles.grid}>{TOYS.filter(t => t.category === category.id).map(tile)}</View>
+          </Entrance>
+        ))}
+
+        <Entrance delay={480}>
           <Text style={styles.section}>Build</Text>
           <View style={styles.rows}>
-            <BuildRow
-              icon={<Gamepad2 size={20} color="#A78BFA" />}
-              title="Playground"
-              subtitle="Mix widgets on a free-form board"
-              onPress={() => go('/playground')}
-            />
-            <BuildRow
-              icon={<Plus size={20} color={theme.accent} />}
-              title="New board"
-              subtitle="Arrange widgets, name it, keep it"
-              onPress={() => go('/create')}
-            />
+            <BuildRow icon={<Gamepad2 size={20} color="#A78BFA" />} title="Playground" subtitle="Mix widgets on a free-form board" onPress={() => go('/playground')} />
+            <BuildRow icon={<Plus size={20} color={theme.accent} />} title="New board" subtitle="Arrange widgets, name it, keep it" onPress={() => go('/create')} />
             <BuildRow
               icon={<FolderOpen size={20} color="#F7B267" />}
               title="My boards"
-              subtitle={boardCount === 0 ? 'Nothing saved yet' : `${boardCount} saved`}
+              subtitle={fidgets.length === 0 ? 'Nothing saved yet' : `${fidgets.length} saved`}
               onPress={() => go('/my-widgets')}
             />
           </View>
-        </Entrance>
 
-        <Entrance delay={320}>
           <Text style={styles.section}>Explore</Text>
-          <BuildRow
-            icon={<Zap size={20} color="#F87171" />}
-            title="Haptics Lab"
-            subtitle="Feel every iPhone vibration"
-            onPress={() => go('/haptics')}
-          />
+          <BuildRow icon={<Zap size={20} color="#F87171" />} title="Haptics Lab" subtitle="Feel and design vibrations" onPress={() => go('/haptics')} />
         </Entrance>
       </ScrollView>
+
+      {toast && (
+        <View pointerEvents="none" style={[styles.toast, { bottom: insets.bottom + 24 }]}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -199,12 +225,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.bg,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: SIDE,
     maxWidth: 520,
     width: '100%',
     alignSelf: 'center',
   },
   brandRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  brandMark: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 5,
@@ -227,57 +258,73 @@ const styles = StyleSheet.create({
     color: theme.textSecondary,
     marginTop: 2,
   },
+  gear: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   section: {
     fontSize: 13,
     fontWeight: '800',
     color: theme.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginTop: 30,
+    marginTop: 28,
     marginBottom: 12,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: GAP,
   },
   tile: {
-    borderRadius: 24,
+    height: TILE_HEIGHT,
+    borderRadius: 22,
     padding: 16,
     backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
     justifyContent: 'space-between',
-    overflow: 'hidden',
   },
-  tileArt: {
-    width: 52,
-    height: 52,
-  },
-  tileWide: {
+  tileTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   tileText: {
     gap: 2,
-    height: 58,
-  },
-  tileTextWide: {
-    flex: 1,
-    gap: 2,
+    height: 56,
   },
   tileTitle: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '800',
     color: theme.text,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   tileLine: {
     fontSize: 12.5,
     color: theme.textSecondary,
     lineHeight: 16,
+  },
+  emptyFavorites: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.borderLight,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.textMuted,
   },
   rows: {
     gap: 10,
@@ -316,5 +363,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.textSecondary,
     marginTop: 1,
+  },
+  toast: {
+    position: 'absolute',
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 20,
+    backgroundColor: theme.surfaceLight,
+    borderWidth: 1,
+    borderColor: theme.borderLight,
+  },
+  toastText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
   },
 });

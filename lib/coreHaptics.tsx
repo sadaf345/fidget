@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import type { RealtimeComposer } from 'react-native-pulsar';
+import { onStopAll, scaled } from '@/lib/hapticState';
 
 /*
  * Core Haptics: continuous vibration with live strength (amplitude) and sharpness (frequency),
@@ -32,6 +33,9 @@ const pulsar = loadPulsar();
 let composer: RealtimeComposer | null = null;
 let lastAmplitude = -1;
 let lastFrequency = -1;
+let lastTap = 0;
+// Roughly 60 taps a second at most, so fast drags and collisions don't saturate the actuator.
+const MIN_TAP_GAP_MS = 16;
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -41,10 +45,13 @@ export const coreHaptics = {
     return composer !== null;
   },
 
-  /** Start or update the continuous vibration. Cheap to call every frame; tiny changes are skipped. */
+  /**
+   * Start or update the continuous vibration. Strength is scaled by the intensity settings.
+   * Cheap to call every frame; tiny changes are skipped.
+   */
   set(amplitude: number, frequency: number): void {
     if (!composer) return;
-    const a = clamp01(amplitude);
+    const a = scaled(amplitude);
     const f = clamp01(frequency);
     if (Math.abs(a - lastAmplitude) < 0.01 && Math.abs(f - lastFrequency) < 0.01) return;
     lastAmplitude = a;
@@ -60,11 +67,19 @@ export const coreHaptics = {
     composer.stop();
   },
 
-  /** One crisp tap at any strength and sharpness, mixed with the continuous vibration. */
+  /** One crisp tap at any strength (scaled by the intensity settings) and sharpness, mixed with the continuous vibration. */
   tap(amplitude: number, frequency: number): void {
-    composer?.playDiscrete(clamp01(amplitude), clamp01(frequency));
+    if (!composer) return;
+    const now = Date.now();
+    if (now - lastTap < MIN_TAP_GAP_MS) return;
+    const a = scaled(amplitude);
+    if (a < 0.01) return;
+    lastTap = now;
+    composer.playDiscrete(a, clamp01(frequency));
   },
 };
+
+onStopAll(() => coreHaptics.stop());
 
 /**
  * Mounted once at the app root. Pulsar exposes its realtime composer as a hook,

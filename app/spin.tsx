@@ -7,7 +7,7 @@ import { playHaptic } from '@/lib/haptics';
 import { coreHaptics } from '@/lib/coreHaptics';
 import { angleAround, angleDelta, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 import { useStat } from '@/hooks/useStat';
-import SensationHeader from '@/components/SensationHeader';
+import ToyChrome from '@/components/ToyChrome';
 
 // A real spinner coasts for a long time; friction is velocity kept per frame.
 const FRICTION = 0.988;
@@ -150,7 +150,6 @@ export default function SpinScreen() {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
-      <SensationHeader title="Spin" stat={`best ${best.value} rpm`} />
 
       <View style={styles.center}>
         <View style={{ width: size, height: size }} {...panResponder.panHandlers}>
@@ -182,6 +181,7 @@ export default function SpinScreen() {
         <Text style={styles.hint}>Flick it around. Touch to stop.</Text>
         <Text style={styles.turns}>{turns.toLocaleString()} turns all time</Text>
       </View>
+      <ToyChrome toyId="spin" stat={`best ${best.value} rpm`} />
     </View>
   );
 }
