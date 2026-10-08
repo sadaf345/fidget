@@ -2,14 +2,20 @@
 
 Something for your hands. A haptic fidget app for iPhone, built for redirecting restless hands: stimming, skin picking, scalp picking.
 
-**Feel** — full-screen sensations, one tap from home:
-- **Pick**: feel across a skin-like surface for rough spots (tiny clicks under your finger), rest on a flake to catch its edge, and pull. Tension builds and it snags, then tears free. Half-pulled flakes stay lifted, new ones keep surfacing, and the surface comes in seven tones.
-- **Pop**: a rainbow pop-it. Press or drag across bubbles; when they're all popped the sheet flips over.
-- **Charge**: hold to build a vibration to its climax. Circle clockwise to wind it faster, counter-clockwise to hold it off. Keep holding to go again, with each repeat hitting harder.
-- **Spin**: a fidget spinner with long coasting momentum, live RPM, and your best.
-- **Shake**: a jar of beads driven by the real accelerometer. Every bead hitting a wall or another bead is a vibration, harder the harder it hits.
+21 toys in six groups, each with its own intensity, Discreet mode and quick-launch link (the gear on its screen):
 
-**Build** — boards of tactile widgets (charge button, dial, scroll strip, swipe pad, drawn slider lines) you arrange, save and come back to.
+| Group | Toys |
+| --- | --- |
+| Pick & peel | Pick (feel for flakes, peel them off), Peel (screen film, masking tape), Loose thread, Scratch-off |
+| Click | Pop, Switch tester (Blue, Brown, Red, Topre), Pen click, Toggle wall, Tally counter |
+| Drag & spin | Spin, Ratchet dial, Zipper, Texture rub (corduroy, sandpaper, stone) |
+| Squish & hold | Charge (hold to a climax, wind to build, combos), Slime, Purring cat, Stress ball |
+| Shake & tilt | Shake (marbles in a jar), Snow globe |
+| Calm | Breathe (box, 4-7-8), Heartbeat (50-80 bpm) |
+
+Also: **Favorites** (long-press a toy), **Settings** (global intensity, Discreet mode), **Haptics Lab** (every system haptic, plus custom intensity/sharpness and a pattern recorder whose patterns can replace the tap on the four tap toys), **Boards** (arrange widgets on a free-form board and save it), and **quick launch** links (`fidget://pick` and so on) for Shortcuts, the Action Button and Control Center.
+
+No accounts, ads, analytics or network calls; everything stays on the phone.
 
 Built with Expo (SDK 57) + React Native + Expo Router + TypeScript. Bundle ID `com.rai.fidget`.
 
@@ -64,34 +70,31 @@ Run this before every commit. Unit tests live in `lib/__tests__/`.
 ## Project layout
 
 ```
-app/                  Screens (Expo Router: file name = route)
-  index.tsx           Home: Feel tiles + Build rows
-  pick.tsx            Pick (skin picking)
-  pop.tsx             Pop (pop-it)
-  charge.tsx          Charge (hold to climax)
-  spin.tsx            Spin (fidget spinner)
-  shake.tsx           Shake (beads in a jar, accelerometer)
-  playground.tsx      Free-form sandbox board (persisted)
-  create.tsx          Build a new board, then name and save it
-  my-widgets.tsx      List of saved boards
-  fidget/[id].tsx     Open and edit one saved board (autosaves)
-  haptics.tsx         Haptics Lab: try every iOS haptic
+app/                    One file per screen (Expo Router: file name = route)
+  index.tsx             Home: favorites + toy grid by category, boards, Haptics Lab
+  pick.tsx ... snow.tsx One file per toy; each renders <ToyChrome toyId="..."> last
+  settings.tsx          Global intensity, Discreet mode
+  haptics.tsx           Haptics Lab
+  playground.tsx, create.tsx, my-widgets.tsx, fidget/[id].tsx   Boards
+  +native-intent.tsx    Quick-launch links -> toy routes
+constants/toys.tsx      The toy registry: title, line, color, category, icon. Add a toy here.
 components/
-  widgets/            Board widgets + WidgetWrapper (drag/rotate/pinch in edit mode)
-  ChargeOrb.tsx       The charge button visuals (board widget and Charge screen)
-  GlassCracks.tsx     Cracks spreading across a pressed Haptics Lab button
-  RumblePad.tsx       Haptics Lab pad for playing the continuous engine directly
-  SensationHeader.tsx Floating back button + title for the Feel screens
-hooks/
-  useCharge.ts        Charge gesture + haptics engine
-  useStat.ts          Lifetime stats (flakes picked, best RPM...) and small preferences
-contexts/             Board state (one per screen) and the saved-boards list
-lib/                  Pure logic, unit-tested in lib/__tests__/
-  haptics.ts          playHaptic() and playSequence(): system taps
-  coreHaptics.tsx     Core Haptics through react-native-pulsar, when the native module is present
-  rumble.ts           Continuous vibration: Core Haptics swell in our build, accelerating taps in Expo Go
-  charge.ts pick.ts pop.ts spin.ts rattle.ts glass.ts board.ts   Rules for each sensation and the boards
-scripts/screenshot.mjs  Screenshot the web preview at phone size (for checking layout)
+  ToyChrome.tsx         Header, gear sheet (intensity, Discreet, options, tap pattern, quick launch), Discreet layer
+  CustomLab.tsx         Haptics Lab custom haptics and pattern recorder
+  ui/                   Slider, Segmented
+  widgets/              Board widgets + WidgetWrapper
+contexts/
+  SettingsContext.tsx   Intensities, Discreet, favorites, toy options, saved patterns (persisted)
+  FidgetContext.tsx     One board's widgets + undo; SavedFidgetContext: saved boards
+hooks/                  useCharge, useStat (lifetime counts), useTapFeel, useReducedMotion
+lib/                    Pure logic, unit-tested in lib/__tests__/
+  haptics.ts            THE haptics service: system taps, transient/continuous, patterns
+  coreHaptics.tsx       Core Haptics via react-native-pulsar, when the native module exists
+  hapticState.ts        Intensity multipliers, active toy, stop-everything
+  rumble.ts             Build-up vibration for Charge and Pick
+  motion.ts             Accelerometer (guarded for builds without it)
+  charge pick pop peel thread scratch slime squish zipper spin rattle snow breathe glass patterns board links
+scripts/screenshot.mjs  Screenshot the web preview at phone size
 ```
 
 Data is stored on-device only (AsyncStorage). The storage keys are the same ones the original build used, so existing boards keep working.
