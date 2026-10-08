@@ -62,12 +62,12 @@ function Keycap({ spec, size, onPress, onRelease }: {
 
   const handleStart = (e: GestureResponderEvent) => {
     const wasUp = touches.size === 0;
-    e.nativeEvent.changedTouches.forEach(t => touches.add(String(t.identifier)));
+    Array.from(e.nativeEvent.changedTouches).forEach(t => touches.add(String(t.identifier)));
     if (wasUp && touches.size > 0) down();
   };
   const handleEnd = (e: GestureResponderEvent) => {
     if (touches.size === 0) return;
-    e.nativeEvent.changedTouches.forEach(t => touches.delete(String(t.identifier)));
+    Array.from(e.nativeEvent.changedTouches).forEach(t => touches.delete(String(t.identifier)));
     if (touches.size === 0) up();
   };
 
