@@ -7,14 +7,20 @@ import { ChevronRight, FolderOpen, Gamepad2, Plus, Zap } from 'lucide-react-nati
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
-import { ChargeArt, PickArt, PopArt, SpinArt } from '@/components/home/SensationArt';
+import { ChargeArt, PickArt, PopArt, ShakeArt, SpinArt } from '@/components/home/SensationArt';
 
 const SENSATIONS = [
   { route: '/pick', title: 'Pick', line: 'Find a rough spot. Peel it off.', color: '#E8A87C', Art: () => <PickArt /> },
   { route: '/pop', title: 'Pop', line: 'A pop-it that never runs out.', color: '#FF7EC8', Art: () => <PopArt /> },
   { route: '/charge', title: 'Charge', line: 'Hold. Build. Release.', color: theme.accent, Art: () => <ChargeArt color={theme.accent} /> },
   { route: '/spin', title: 'Spin', line: 'Flick it and let it coast.', color: '#A78BFA', Art: () => <SpinArt color="#A78BFA" /> },
+  { route: '/shake', title: 'Shake', line: 'Rattle the jar. Feel every bead.', color: '#38BDF8', Art: () => <ShakeArt color="#38BDF8" />, wide: true },
 ] as const;
+
+// Every square tile reserves room for a two-line description, so the gap between
+// the icon and the title is identical whether the description wraps or not.
+const TILE_HEIGHT = 166;
+const WIDE_TILE_HEIGHT = 96;
 
 /** Fades and slides children in after `delay` ms. */
 function Entrance({ delay, children }: { delay: number; children: React.ReactNode }) {
@@ -51,33 +57,35 @@ function useTactile() {
   };
 }
 
-function SensationTile({ title, line, color, Art, onPress, width }: {
+function SensationTile({ title, line, color, Art, onPress, width, wide = false }: {
   title: string;
   line: string;
   color: string;
   Art: () => React.ReactElement;
   onPress: () => void;
   width: number;
+  wide?: boolean;
 }) {
   const { scale, onPressIn, onPressOut } = useTactile();
+  const height = wide ? WIDE_TILE_HEIGHT : TILE_HEIGHT;
   return (
     <Animated.View style={{ width, transform: [{ scale }] }}>
       <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
         {({ pressed }) => (
-          <View style={[styles.tile, pressed && { borderColor: color }]}>
-            <Svg width={width} height={140} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={[styles.tile, { height }, wide && styles.tileWide, pressed && { borderColor: color }]}>
+            <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
               <Defs>
                 <RadialGradient id={`glow-${title}`} cx="85%" cy="10%" r="80%">
                   <Stop offset="0" stopColor={color} stopOpacity={pressed ? 0.4 : 0.22} />
                   <Stop offset="1" stopColor={color} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
-              <Rect width={width} height={140} fill={`url(#glow-${title})`} />
+              <Rect width={width} height={height} fill={`url(#glow-${title})`} />
             </Svg>
             <View style={styles.tileArt}>
               <Art />
             </View>
-            <View style={styles.tileText}>
+            <View style={wide ? styles.tileTextWide : styles.tileText}>
               <Text style={styles.tileTitle}>{title}</Text>
               <Text style={styles.tileLine} numberOfLines={2}>{line}</Text>
             </View>
@@ -137,7 +145,12 @@ export default function HomeScreen() {
           <Text style={styles.section}>Feel</Text>
           <View style={styles.grid}>
             {SENSATIONS.map(s => (
-              <SensationTile key={s.title} {...s} width={tileWidth} onPress={() => go(s.route)} />
+              <SensationTile
+                key={s.title}
+                {...s}
+                width={'wide' in s && s.wide ? tileWidth * 2 + 12 : tileWidth}
+                onPress={() => go(s.route)}
+              />
             ))}
           </View>
         </Entrance>
@@ -167,14 +180,13 @@ export default function HomeScreen() {
         </Entrance>
 
         <Entrance delay={320}>
-          <Pressable
+          <Text style={styles.section}>Explore</Text>
+          <BuildRow
+            icon={<Zap size={20} color="#F87171" />}
+            title="Haptics Lab"
+            subtitle="Feel every iPhone vibration"
             onPress={() => go('/haptics')}
-            style={({ pressed }) => [styles.labLink, pressed && { opacity: 0.6 }]}
-            hitSlop={8}
-          >
-            <Zap size={14} color={theme.textMuted} />
-            <Text style={styles.labText}>Haptics Lab</Text>
-          </Pressable>
+          />
         </Entrance>
       </ScrollView>
     </View>
@@ -230,7 +242,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tile: {
-    height: 140,
     borderRadius: 24,
     padding: 16,
     backgroundColor: theme.surface,
@@ -243,7 +254,18 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
   },
+  tileWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 16,
+  },
   tileText: {
+    gap: 2,
+    height: 58,
+  },
+  tileTextWide: {
+    flex: 1,
     gap: 2,
   },
   tileTitle: {
@@ -294,18 +316,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.textSecondary,
     marginTop: 1,
-  },
-  labLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 28,
-    paddingVertical: 8,
-  },
-  labText: {
-    fontSize: 14,
-    color: theme.textMuted,
-    fontWeight: '600',
   },
 });

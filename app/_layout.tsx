@@ -18,6 +18,7 @@ function RootLayoutNav() {
       <Stack.Screen name="pop" />
       <Stack.Screen name="charge" />
       <Stack.Screen name="spin" />
+      <Stack.Screen name="shake" />
       <Stack.Screen name="playground" />
       <Stack.Screen name="create" />
       <Stack.Screen name="my-widgets" />

@@ -10,7 +10,12 @@ const HEIGHT = 200;
  * Drag to play the continuous haptic engine directly: up = stronger, right = sharper.
  * In Expo Go (taps only) it explains that rich haptics need our own build instead.
  */
-export default function RumblePad() {
+interface RumblePadProps {
+  /** Told when a finger lands on and leaves the pad, so a parent ScrollView can stop scrolling. */
+  onActiveChange?: (active: boolean) => void;
+}
+
+export default function RumblePad({ onActiveChange }: RumblePadProps) {
   const { width: screenWidth } = useWindowDimensions();
   const width = screenWidth - 32;
   const [touch, setTouch] = useState<{ x: number; y: number } | null>(null);
@@ -33,13 +38,15 @@ export default function RumblePad() {
       onPanResponderRelease: () => {
         coreHaptics.stop();
         setTouch(null);
+        onActiveChange?.(false);
       },
       onPanResponderTerminate: () => {
         coreHaptics.stop();
         setTouch(null);
+        onActiveChange?.(false);
       },
     });
-  }, [width]);
+  }, [width, onActiveChange]);
 
   if (!available) {
     return (
@@ -58,7 +65,14 @@ export default function RumblePad() {
 
   return (
     <View>
-      <View style={[styles.pad, { width, height: HEIGHT }]} {...panResponder.panHandlers}>
+      <View
+        style={[styles.pad, { width, height: HEIGHT }]}
+        {...panResponder.panHandlers}
+        // Lock the page's scrolling the instant a finger lands, before the scroll view can claim the drag.
+        onTouchStart={() => onActiveChange?.(true)}
+        onTouchEnd={() => onActiveChange?.(false)}
+        onTouchCancel={() => onActiveChange?.(false)}
+      >
         <Svg width={width} height={HEIGHT} style={StyleSheet.absoluteFill} pointerEvents="none">
           <Defs>
             <LinearGradient id="sharp" x1="0" y1="0" x2="1" y2="0">

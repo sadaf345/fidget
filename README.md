@@ -7,6 +7,7 @@ Something for your hands. A haptic fidget app for iPhone, built for redirecting 
 - **Pop**: a rainbow pop-it. Press or drag across bubbles; when they're all popped the sheet flips over.
 - **Charge**: hold to build a vibration to its climax. Circle clockwise to wind it faster, counter-clockwise to hold it off. Keep holding to go again, with each repeat hitting harder.
 - **Spin**: a fidget spinner with long coasting momentum, live RPM, and your best.
+- **Shake**: a jar of beads driven by the real accelerometer. Every bead hitting a wall or another bead is a vibration, harder the harder it hits.
 
 **Build** — boards of tactile widgets (charge button, dial, scroll strip, swipe pad, drawn slider lines) you arrange, save and come back to.
 
@@ -34,7 +35,7 @@ The Expo account is already linked (`@sadafc/fidget`). Then:
 3. **Build it:** `npm run build:dev`. The first time, sign in with your Apple Developer account and let EAS create the signing certificates. The build runs in Expo's cloud (about 15–30 minutes).
 4. **Install it:** open the link or QR code from the finished build on the iPhone.
 
-Rebuild (`npm run build:dev`) only when native code changes: new libraries with native parts, an Expo SDK upgrade, or `app.json` changes. Everyday code changes don't need a rebuild.
+Rebuild (`npm run build:dev`) only when native code changes: new libraries with native parts, an Expo SDK upgrade, or `app.json` changes. Everyday code changes don't need a rebuild. Native libraries so far: `react-native-pulsar` (Core Haptics) and `expo-sensors` (Shake's accelerometer).
 
 ### Without the development build
 
@@ -69,6 +70,7 @@ app/                  Screens (Expo Router: file name = route)
   pop.tsx             Pop (pop-it)
   charge.tsx          Charge (hold to climax)
   spin.tsx            Spin (fidget spinner)
+  shake.tsx           Shake (beads in a jar, accelerometer)
   playground.tsx      Free-form sandbox board (persisted)
   create.tsx          Build a new board, then name and save it
   my-widgets.tsx      List of saved boards
@@ -77,7 +79,8 @@ app/                  Screens (Expo Router: file name = route)
 components/
   widgets/            Board widgets + WidgetWrapper (drag/rotate/pinch in edit mode)
   ChargeOrb.tsx       The charge button visuals (board widget and Charge screen)
-  GlassShatter.tsx    Glass-break effect used in the Haptics Lab
+  GlassCracks.tsx     Cracks spreading across a pressed Haptics Lab button
+  RumblePad.tsx       Haptics Lab pad for playing the continuous engine directly
   SensationHeader.tsx Floating back button + title for the Feel screens
 hooks/
   useCharge.ts        Charge gesture + haptics engine
@@ -87,7 +90,7 @@ lib/                  Pure logic, unit-tested in lib/__tests__/
   haptics.ts          playHaptic() and playSequence(): system taps
   coreHaptics.tsx     Core Haptics through react-native-pulsar, when the native module is present
   rumble.ts           Continuous vibration: Core Haptics swell in our build, accelerating taps in Expo Go
-  charge.ts pick.ts pop.ts spin.ts board.ts   Rules for each sensation and the boards
+  charge.ts pick.ts pop.ts spin.ts rattle.ts glass.ts board.ts   Rules for each sensation and the boards
 scripts/screenshot.mjs  Screenshot the web preview at phone size (for checking layout)
 ```
 

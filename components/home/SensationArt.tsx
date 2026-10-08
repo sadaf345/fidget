@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
-import Svg, { Circle, Line, Polygon } from 'react-native-svg';
+import Svg, { Circle, Line, Polygon, Rect } from 'react-native-svg';
 
 const SIZE = 52;
 
@@ -88,6 +88,44 @@ export function SpinArt({ color }: { color: string }) {
           </React.Fragment>
         ))}
         <Circle cx={26} cy={26} r={6} fill="#E4E6EE" />
+      </Svg>
+    </Animated.View>
+  );
+}
+
+/** A jar of beads that wobbles like it's being shaken. */
+export function ShakeArt({ color }: { color: string }) {
+  const wobble = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wobble, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(wobble, { toValue: -1, duration: 160, useNativeDriver: true }),
+        Animated.timing(wobble, { toValue: 0.6, duration: 130, useNativeDriver: true }),
+        Animated.timing(wobble, { toValue: 0, duration: 110, useNativeDriver: true }),
+        Animated.delay(1400),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [wobble]);
+  const beads = [
+    { x: 19, y: 36, c: '#FF6B6B' },
+    { x: 31, y: 37, c: '#FECA57' },
+    { x: 25, y: 27, c: '#54A0FF' },
+    { x: 34, y: 25, c: '#1DD1A1' },
+    { x: 18, y: 22, c: '#A78BFA' },
+  ];
+  return (
+    <Animated.View style={{ width: SIZE, height: SIZE, transform: [{ rotate: wobble.interpolate({ inputRange: [-1, 1], outputRange: ['-9deg', '9deg'] }) }] }}>
+      <Svg width={SIZE} height={SIZE}>
+        <Rect x={9} y={8} width={34} height={38} rx={10} fill="none" stroke={color} strokeOpacity={0.7} strokeWidth={2} />
+        {beads.map(b => (
+          <React.Fragment key={`${b.x}-${b.y}`}>
+            <Circle cx={b.x} cy={b.y} r={5.2} fill={b.c} />
+            <Circle cx={b.x - 1.6} cy={b.y - 1.6} r={1.5} fill="#FFFFFF" opacity={0.7} />
+          </React.Fragment>
+        ))}
       </Svg>
     </Animated.View>
   );

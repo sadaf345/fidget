@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Pressable,
   Animated,
+  Easing,
   GestureResponderEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +15,8 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
-import ShatterBurst from '@/components/GlassShatter';
+import GlassCracks from '@/components/GlassCracks';
+import { crackNetwork, CrackLine } from '@/lib/glass';
 import RumblePad from '@/components/RumblePad';
 
 interface HapticItem {
@@ -34,37 +36,55 @@ const CATEGORIES = [
 ];
 
 const CARD_RADIUS = 16;
+// Long enough to filter out the start of a scroll, short enough to feel instant.
+const PRESS_DELAY_MS = 60;
 
 function HapticCard({ item }: { item: HapticItem }) {
-  const shake = useRef(new Animated.Value(0)).current;
-  const [bursts, setBursts] = useState<{ id: number; x: number; y: number }[]>([]);
-  const nextId = useRef(0);
+  const press = useRef(new Animated.Value(0)).current;
+  const crackProgress = useRef(new Animated.Value(0)).current;
+  const crackOpacity = useRef(new Animated.Value(0)).current;
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [cracks, setCracks] = useState<CrackLine[]>([]);
+  const seed = useRef(1);
 
-  const handlePress = useCallback((e: GestureResponderEvent) => {
+  const handlePressIn = useCallback((e: GestureResponderEvent) => {
     item.onTrigger();
     const { locationX, locationY } = e.nativeEvent;
-    const id = nextId.current++;
-    // Keep a few overlapping bursts so rapid taps keep cracking.
-    setBursts(prev => [...prev.slice(-3), { id, x: locationX, y: locationY }]);
-    shake.setValue(0);
-    Animated.sequence([
-      Animated.timing(shake, { toValue: 1, duration: 35, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -0.8, duration: 50, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0.45, duration: 45, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 50, useNativeDriver: true }),
-    ]).start();
-  }, [item, shake]);
+    setCracks(crackNetwork(size.width, size.height, { x: locationX, y: locationY }, seed.current++));
+    crackProgress.stopAnimation();
+    crackProgress.setValue(0);
+    crackOpacity.stopAnimation();
+    crackOpacity.setValue(1);
+    // The glass sinks under the finger while cracks run out across it.
+    Animated.spring(press, { toValue: 1, friction: 7, tension: 280, useNativeDriver: true }).start();
+    Animated.timing(crackProgress, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [item, size, press, crackProgress, crackOpacity]);
 
-  const removeBurst = useCallback((id: number) => setBursts(prev => prev.filter(b => b.id !== id)), []);
+  const handlePressOut = useCallback(() => {
+    Animated.spring(press, { toValue: 0, friction: 5, tension: 170, useNativeDriver: true }).start();
+    Animated.timing(crackOpacity, { toValue: 0, duration: 280, easing: Easing.in(Easing.quad), useNativeDriver: true }).start();
+  }, [press, crackOpacity]);
 
   return (
     <Animated.View
       style={[
         styles.cardOuter,
-        { zIndex: bursts.length ? 2 : 0, transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-3.5, 3.5] }) }] },
+        {
+          transform: [
+            { translateY: press.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) },
+            { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.985] }) },
+          ],
+        },
       ]}
     >
-      <Pressable onPress={handlePress} testID={`haptic-${item.id}`} style={({ pressed }) => [styles.card, pressed && { backgroundColor: item.color + '10' }]}>
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        unstable_pressDelay={PRESS_DELAY_MS}
+        onLayout={e => setSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+        testID={`haptic-${item.id}`}
+        style={styles.card}
+      >
         <View pointerEvents="none" style={styles.cardRow}>
           <View style={[styles.iconBubble, { backgroundColor: item.color + '18' }]}>
             <Text style={[styles.symbolText, { color: item.color }]}>{item.symbol}</Text>
@@ -75,9 +95,12 @@ function HapticCard({ item }: { item: HapticItem }) {
           </View>
         </View>
       </Pressable>
-      {bursts.map(b => (
-        <ShatterBurst key={b.id} id={b.id} x={b.x} y={b.y} color={item.color} radius={CARD_RADIUS} onDone={removeBurst} />
-      ))}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.cardClip]}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.pressShade, { opacity: press.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) }]} />
+        {cracks.length > 0 && size.width > 0 && (
+          <GlassCracks lines={cracks} width={size.width} height={size.height} progress={crackProgress} opacity={crackOpacity} />
+        )}
+      </View>
     </Animated.View>
   );
 }
@@ -85,6 +108,7 @@ function HapticCard({ item }: { item: HapticItem }) {
 export default function HapticsExplorer() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [padActive, setPadActive] = useState(false);
 
   const hapticItems: HapticItem[] = [
     {
@@ -149,6 +173,7 @@ export default function HapticsExplorer() {
 
       <ScrollView
         style={styles.scrollView}
+        scrollEnabled={!padActive}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -164,7 +189,7 @@ export default function HapticsExplorer() {
             <Text style={styles.sectionTitle}>Continuous (Core Haptics)</Text>
             <Text style={styles.sectionDesc}>{"The engine behind Charge's build-up and Pick's tension"}</Text>
           </View>
-          <RumblePad />
+          <RumblePad onActiveChange={setPadActive} />
         </View>
 
         {CATEGORIES.map((cat) => {
@@ -223,6 +248,8 @@ const styles = StyleSheet.create({
   cardOuter: { borderRadius: CARD_RADIUS, borderWidth: 1, borderColor: theme.widgetBorder, backgroundColor: theme.surface },
   card: { borderRadius: CARD_RADIUS, padding: 14 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardClip: { borderRadius: CARD_RADIUS, overflow: 'hidden' },
+  pressShade: { backgroundColor: 'rgba(0,0,0,0.22)' },
   iconBubble: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   symbolText: { fontSize: 22, fontWeight: '600' as const },
   cardContent: { flex: 1 },
