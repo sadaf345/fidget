@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, Platform, StatusBar, LayoutChangeEvent } from 'react-native';
+import { accelerometer } from '@/lib/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { requireOptionalNativeModule } from 'expo';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
@@ -13,17 +13,6 @@ import { useStat } from '@/hooks/useStat';
 import { useToyOption } from '@/contexts/SettingsContext';
 import Slider from '@/components/ui/Slider';
 import ToyChrome from '@/components/ToyChrome';
-
-type AccelerometerApi = typeof import('expo-sensors').Accelerometer;
-
-/** The accelerometer, or null in builds made before expo-sensors was added (and on web). */
-function loadAccelerometer(): AccelerometerApi | null {
-  if (Platform.OS === 'web' || !requireOptionalNativeModule('ExponentAccelerometer')) return null;
-  // A static import would crash older builds that don't include the native module.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require('expo-sensors') as typeof import('expo-sensors')).Accelerometer;
-}
-const accelerometer = loadAccelerometer();
 
 const BEAD_COLORS = ['#FF6B6B', '#FECA57', '#1DD1A1', '#54A0FF', '#A78BFA', '#FF7EC8', '#FF9F43', '#2ED3D3'];
 // Marble tray: 5-12 marbles, adjustable in the toy's settings.
