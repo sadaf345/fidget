@@ -10,7 +10,6 @@ import { useToyOption } from '@/contexts/SettingsContext';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import Slider from '@/components/ui/Slider';
 import ToyChrome from '@/components/ToyChrome';
-import { sound } from '@/lib/sound/engine';
 
 const DUB_DELAY_MS = 120;
 const COLOR = '#FB7185';
@@ -40,11 +39,9 @@ export default function HeartbeatScreen() {
     const clear = () => s.timers.forEach(clearTimeout);
     const loop = () => {
       transient(0.8, 0.2);
-      sound.play('lub', { vary: 0.02 });
       pulse(1);
       s.timers.push(setTimeout(() => {
         transient(0.5, 0.2);
-        sound.play('dub', { vary: 0.02 });
         pulse(0.6);
       }, DUB_DELAY_MS));
       s.timers.push(setTimeout(loop, 60000 / s.bpm));

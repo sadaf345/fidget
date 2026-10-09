@@ -3,7 +3,6 @@ import { View, StyleSheet, Animated, PanResponder } from 'react-native';
 import { theme } from '@/constants/colors';
 import { HapticPower } from '@/types/fidget';
 import { playHaptic } from '@/lib/haptics';
-import { sound } from '@/lib/sound/engine';
 import { angleAround, angleDelta, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 
 interface ScrollWheelWidgetProps {
@@ -52,7 +51,6 @@ export default function ScrollWheelWidget({ disabled, hapticPower = 'light' }: S
         if (now - lastHapticRef.current >= MIN_HAPTIC_INTERVAL_MS) {
           lastHapticRef.current = now;
           playHaptic(hapticPowerRef.current);
-          sound.play('detent', { volume: 0.45 });
         }
       }
     };

@@ -7,7 +7,6 @@ import { continuous, playEvents } from '@/lib/haptics';
 import { squeezeIntensity } from '@/lib/squish';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import ToyChrome from '@/components/ToyChrome';
-import { sound, useLoop } from '@/lib/sound/engine';
 
 const SIZE = 240;
 
@@ -16,8 +15,6 @@ export default function StressBallScreen() {
   const reduced = useReducedMotion();
   const squeeze = useRef(new Animated.Value(0)).current;
   const s = useRef({ frame: null as number | null, began: 0 }).current;
-  // Foam creaking tighter as you squeeze.
-  const creak = useLoop('noise', { type: 'bandpass', freq: 500, q: 4 });
 
   useEffect(() => () => {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
@@ -29,7 +26,6 @@ export default function StressBallScreen() {
     const tick = () => {
       const intensity = squeezeIntensity(Date.now() - s.began);
       continuous.set(intensity, 0.2);
-      creak.set({ volume: 0.06 + 0.3 * (intensity - 0.2), freq: 450 + 750 * (intensity - 0.2) });
       squeeze.setValue((intensity - 0.2) / 0.8);
       s.frame = requestAnimationFrame(tick);
     };
@@ -40,8 +36,6 @@ export default function StressBallScreen() {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
     s.frame = null;
     continuous.stop();
-    creak.stop(50);
-    sound.play('boing', { rate: 0.9 + 0.3 * Math.random() });
     playEvents([
       { time: 0, intensity: 0.5, sharpness: 0.4 },
       { time: 80, intensity: 0.2, sharpness: 0.3 },

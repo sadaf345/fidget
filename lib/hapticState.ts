@@ -18,17 +18,9 @@ export function setIntensitySettings(global: number, perToy: Record<string, numb
   toyIntensity = perToy;
 }
 
-const toyListeners = new Set<(id: string | null) => void>();
-
-/** The toy currently on screen, so its own intensity multiplier (and sound mute) applies. */
+/** The toy currently on screen, so its own intensity multiplier applies. */
 export function setActiveToy(id: string | null): void {
   activeToy = id;
-  toyListeners.forEach(fn => fn(id));
-}
-
-export function onActiveToyChange(fn: (id: string | null) => void): () => void {
-  toyListeners.add(fn);
-  return () => toyListeners.delete(fn);
 }
 
 export function getActiveToy(): string | null {

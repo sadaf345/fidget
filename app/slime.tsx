@@ -8,7 +8,6 @@ import { continuous, playEvents } from '@/lib/haptics';
 import { createSlime, pressureFor, slimePath, SlimeTouch, stepSlime, targetOffsets } from '@/lib/slime';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import ToyChrome from '@/components/ToyChrome';
-import { sound, useLoop } from '@/lib/sound/engine';
 
 interface Finger {
   x: number;
@@ -24,9 +23,6 @@ export default function SlimeScreen() {
   const [dimples, setDimples] = useState<SlimeTouch[]>([]);
   const slime = useRef(createSlime()).current;
   const fingers = useRef(new Map<string, Finger>()).current;
-  // A wet squelch that darkens and swells as you press in, with the odd bubble.
-  const squelch = useLoop('brown', { type: 'lowpass', freq: 300, q: 2 });
-  const nextBubble = useRef(0);
   const areaRef = useRef<View>(null);
   // Window position of the slime area: touch positions come in window coordinates.
   const origin = useRef({ x: 0, y: 0 });
@@ -60,12 +56,6 @@ export default function SlimeScreen() {
       if (touches.length > 0) {
         const pressure = Math.max(...touches.map(t => t.pressure));
         continuous.set(0.2 + 0.6 * pressure, 0.15);
-        squelch.set({ volume: 0.12 + 0.38 * pressure + 0.04 * (touches.length - 1), freq: 260 + 640 * pressure, rate: 0.8 + 0.3 * pressure });
-        const now = Date.now();
-        if (motion > 2 && now > nextBubble.current) {
-          nextBubble.current = now + 180 + Math.random() * 520;
-          sound.play('blip', { volume: 0.35 + 0.4 * pressure, rate: 0.7 + Math.random() * 0.8 });
-        }
       }
       const still = touches.length === 0 && motion < 0.05;
       if (!still || !idle) {
@@ -79,7 +69,7 @@ export default function SlimeScreen() {
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
     };
-  }, [radius, cx, cy, slime, touchesNow, squelch]));
+  }, [radius, cx, cy, slime, touchesNow]));
 
   const sync = (e: GestureResponderEvent) => {
     const seen = new Set<string>();
@@ -97,8 +87,6 @@ export default function SlimeScreen() {
     sync(e);
     if (hadFingers && fingers.size === 0) {
       continuous.stop();
-      squelch.stop(120);
-      sound.play('wobble', { rate: 0.85 + Math.random() * 0.3 });
       // The wobble as it settles back.
       playEvents([
         { time: 0, intensity: 0.4, sharpness: 0.4 },

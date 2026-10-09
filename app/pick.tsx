@@ -5,7 +5,6 @@ import Svg, { Circle, Defs, Polygon, RadialGradient, Rect, Stop } from 'react-na
 import { playHaptic, playSequence } from '@/lib/haptics';
 import { Rumble } from '@/lib/rumble';
 import { coreHaptics } from '@/lib/coreHaptics';
-import { sound, useLoop } from '@/lib/sound/engine';
 import { Bounds, bumpAt, createRng, Flake, flakeAt, makeBumps, makeFlake, outlinePoints, peelProgress, Point, snagsCrossed } from '@/lib/pick';
 import { mixColor } from '@/lib/color';
 import { usePref, useStat } from '@/hooks/useStat';
@@ -96,8 +95,6 @@ export default function PickScreen() {
   const offsetX = useRef(new Animated.Value(0)).current;
   const offsetY = useRef(new Animated.Value(0)).current;
   const rumble = useRef(new Rumble()).current;
-  // The skin's strain as a flake is worked loose.
-  const strain = useLoop('creak');
 
   const touch = useRef({
     peel: null as Peel | null,
@@ -138,7 +135,6 @@ export default function PickScreen() {
       setActiveId(flake.id);
       setHintVisible(false);
       playHaptic('rigid');
-      sound.play('catch', { volume: 0.8 });
     };
 
     const detach = (peel: Peel, at: Point) => {
@@ -151,9 +147,6 @@ export default function PickScreen() {
         { at: 16, power: 'heavy' },
         { at: 120, power: 'soft' },
       ]);
-      strain.stop(30);
-      sound.play('tear', { rate: 1.25 - flake.size / 60 });
-      sound.play('reward', { volume: 0.55, delay: 90, vary: 0.08 });
       const dx = at.x - start.x;
       const dy = at.y - start.y;
       const len = Math.hypot(dx, dy) || 1;
@@ -177,7 +170,6 @@ export default function PickScreen() {
           { at: 0, power: 'rigid' },
           { at: 30, power: 'light' },
         ]);
-        sound.play('snag', { volume: 0.9, vary: 0.1 });
       }
       peel.progress = progress;
       if (progress >= 1) {
@@ -185,7 +177,6 @@ export default function PickScreen() {
         return;
       }
       rumble.set(0.1 + 0.85 * Math.pow(progress, 1.3));
-      strain.set({ volume: 0.08 + 0.4 * progress, rate: 0.75 + 0.6 * progress });
       lift.setValue(progress);
       // The flake stretches toward the finger as it loosens.
       const follow = 0.1 + 0.25 * progress;
@@ -195,9 +186,7 @@ export default function PickScreen() {
 
     const releasePeel = (peel: Peel) => {
       rumble.stop();
-      strain.stop();
       playHaptic('soft');
-      sound.play('tick', { volume: 0.5, rate: 0.8 });
       const kept = Math.min(0.85, Math.max(peel.flake.loosened, peel.progress * 0.55));
       setFlakes(prev => prev.map(f => (f.id === peel.flake.id ? { ...f, loosened: kept } : f)));
       Animated.parallel([
@@ -224,8 +213,6 @@ export default function PickScreen() {
           } else {
             playHaptic(flake ? (flake.loosened > 0 ? 'medium' : 'light') : 'selection');
           }
-          // A dry scritch over flakes, a faint grain over bumps.
-          sound.play('tick', flake ? { volume: flake.loosened > 0 ? 0.6 : 0.45, rate: 1.2, vary: 0.12 } : { volume: 0.2, rate: 1.6, vary: 0.15 });
         }
       }
 
@@ -269,7 +256,7 @@ export default function PickScreen() {
         if (touch.peel) releasePeel(touch.peel);
       },
     });
-  }, [bumps, lift, offsetX, offsetY, rumble, strain, touch, addPicked, setFlakes]);
+  }, [bumps, lift, offsetX, offsetY, rumble, touch, addPicked, setFlakes]);
 
   const removeFlying = useCallback((id: number) => setFlying(prev => prev.filter(f => f.id !== id)), []);
   const removeMark = useCallback((id: number) => setMarks(prev => prev.filter(m => m.id !== id)), []);

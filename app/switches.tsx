@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/constants/colors';
 import { continuous, transient } from '@/lib/haptics';
 import { useTapFeel } from '@/hooks/useTapFeel';
-import { sound } from '@/lib/sound/engine';
 import ToyChrome from '@/components/ToyChrome';
 
 type SwitchKind = 'blue' | 'brown' | 'red' | 'topre';
@@ -35,14 +34,12 @@ function pressFeel(kind: SwitchKind) {
 
 function releaseFeel(kind: SwitchKind) {
   switch (kind) {
-    case 'blue': transient(0.5, 1.0); sound.play('clack'); break;
-    case 'brown': transient(0.3, 0.5); sound.play('tick', { volume: 0.5, rate: 0.9 }); break;
-    case 'red': sound.play('tick', { volume: 0.25, rate: 0.7 }); break;
-    case 'topre': transient(0.3, 0.2); sound.play('thockUp'); break;
+    case 'blue': transient(0.5, 1.0); break;
+    case 'brown': transient(0.3, 0.5); break;
+    case 'red': break;
+    case 'topre': transient(0.3, 0.2); break;
   }
 }
-
-const PRESS_SOUND = { blue: 'click', brown: 'bump', red: 'thud', topre: 'thock' } as const;
 
 function Keycap({ spec, size, onPress, onRelease }: {
   spec: (typeof KEYS)[number];
@@ -120,10 +117,7 @@ export default function SwitchTesterScreen() {
   const size = Math.min((width - 24 * 2 - 20) / 2, 190);
   const tapFeel = useTapFeel('switches');
 
-  const handlePress = useCallback((kind: SwitchKind) => {
-    tapFeel(() => pressFeel(kind));
-    sound.play(PRESS_SOUND[kind]);
-  }, [tapFeel]);
+  const handlePress = useCallback((kind: SwitchKind) => tapFeel(() => pressFeel(kind)), [tapFeel]);
 
   return (
     <View style={styles.root}>

@@ -9,12 +9,11 @@ import { INTENSITY_MAX, INTENSITY_MIN, useSettings } from '@/contexts/SettingsCo
 import { coreHaptics } from '@/lib/coreHaptics';
 import { playHaptic, transient } from '@/lib/haptics';
 import Slider from '@/components/ui/Slider';
-import { sound } from '@/lib/sound/engine';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { settings, setGlobalIntensity, setDiscreet, setSound, setVolume } = useSettings();
+  const { settings, setGlobalIntensity, setDiscreet } = useSettings();
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
@@ -68,40 +67,6 @@ export default function SettingsScreen() {
             trackColor={{ true: theme.accent, false: theme.border }}
             accessibilityLabel="Discreet mode"
           />
-        </View>
-
-        <Text style={styles.section}>Sound</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Sounds</Text>
-              <Text style={styles.note}>Every toy has its own sounds. They follow your silent switch, and Discreet mode mutes them.</Text>
-            </View>
-            <Switch
-              value={settings.sound}
-              onValueChange={on => {
-                playHaptic('light');
-                setSound(on);
-              }}
-              trackColor={{ true: theme.accent, false: theme.border }}
-              accessibilityLabel="Sounds"
-            />
-          </View>
-          {settings.sound && (
-            <Slider
-              label="Volume"
-              value={settings.volume}
-              min={0}
-              max={1}
-              step={0.05}
-              format={v => `${Math.round(v * 100)}%`}
-              onChange={v => {
-                setVolume(v);
-                sound.play('click', { volume: 1 });
-              }}
-            />
-          )}
-          {!sound.available && <Text style={styles.note}>This build has no sound engine. The full app build plays sounds.</Text>}
         </View>
 
         <Text style={styles.section}>Haptics engine</Text>

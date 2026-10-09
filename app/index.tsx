@@ -9,7 +9,6 @@ import { playHaptic } from '@/lib/haptics';
 import { useSavedFidgets } from '@/contexts/SavedFidgetContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { sound } from '@/lib/sound/engine';
 
 const TILE_HEIGHT = 156;
 const GAP = 12;
@@ -125,7 +124,6 @@ export default function HomeScreen() {
   const favorite = useCallback((toy: Toy) => {
     const adding = !settings.favorites.includes(toy.id);
     playHaptic(adding ? 'success' : 'medium');
-    sound.play(adding ? 'reward' : 'tick', { volume: adding ? 0.6 : 0.5 });
     toggleFavorite(toy.id);
     const message = adding ? `${toy.title} added to favorites` : `${toy.title} removed from favorites`;
     setToast(message);

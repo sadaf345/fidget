@@ -18,7 +18,6 @@ import { theme } from '@/constants/colors';
 import GlassCracks from '@/components/GlassCracks';
 import { crackNetwork, CrackLine } from '@/lib/glass';
 import CustomLab from '@/components/CustomLab';
-import { sound } from '@/lib/sound/engine';
 
 interface HapticItem {
   id: string;
@@ -50,7 +49,6 @@ function HapticCard({ item }: { item: HapticItem }) {
 
   const handlePressIn = useCallback((e: GestureResponderEvent) => {
     item.onTrigger();
-    sound.play('crack', { vary: 0.08 });
     const { locationX, locationY } = e.nativeEvent;
     setCracks(crackNetwork(size.width, size.height, { x: locationX, y: locationY }, seed.current++));
     crackProgress.stopAnimation();

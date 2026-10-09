@@ -7,7 +7,6 @@ import { continuous, playHaptic } from '@/lib/haptics';
 import { createRng, Point } from '@/lib/pick';
 import { clearedFraction, Coverage, createCoverage, PHRASES, scratchAt } from '@/lib/scratch';
 import ToyChrome from '@/components/ToyChrome';
-import { sound, useLoop } from '@/lib/sound/engine';
 
 const BRUSH = 22;
 const DONE_AT = 0.9;
@@ -28,8 +27,6 @@ export default function ScratchScreen() {
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
   const foil = useRef(new Animated.Value(1)).current;
-  // The scratch of a coin edge on foil.
-  const rasp = useLoop('noise', { type: 'bandpass', freq: 4200, q: 0.7 });
   const s = useRef({
     coverage: null as Coverage | null,
     strokes: [] as Point[][],
@@ -58,9 +55,7 @@ export default function ScratchScreen() {
       s.done = true;
       setDone(true);
       continuous.stop();
-      rasp.stop(40);
       playHaptic('success');
-      sound.play('chime');
       Animated.timing(foil, { toValue: 0, duration: 500, useNativeDriver: true }).start();
       s.next = setTimeout(() => {
         s.strokes = [];
@@ -83,15 +78,10 @@ export default function ScratchScreen() {
       }
       if (fresh > 0) {
         continuous.set(Math.min(0.5, 0.25 * (0.5 + speed / 0.4)), 1.0);
-        rasp.set({ volume: Math.min(0.5, 0.12 + speed * 0.35 + fresh * 0.01), freq: 3500 + Math.min(1, speed) * 2500 });
         if (s.idle) clearTimeout(s.idle);
-        s.idle = setTimeout(() => {
-          continuous.stop();
-          rasp.stop(50);
-        }, IDLE_MS);
+        s.idle = setTimeout(() => continuous.stop(), IDLE_MS);
       } else {
         continuous.stop();
-        rasp.stop(50);
       }
       if (clearedFraction(s.coverage) >= DONE_AT) complete();
     };
@@ -121,16 +111,10 @@ export default function ScratchScreen() {
         current.push(at);
         setStrokes([...s.strokes]);
       },
-      onPanResponderRelease: () => {
-        continuous.stop();
-        rasp.stop();
-      },
-      onPanResponderTerminate: () => {
-        continuous.stop();
-        rasp.stop();
-      },
+      onPanResponderRelease: () => continuous.stop(),
+      onPanResponderTerminate: () => continuous.stop(),
     });
-  }, [s, foil, card, rasp]);
+  }, [s, foil, card]);
 
   const path = strokes
     .map(stroke => stroke.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + (stroke.length === 1 ? ' l 0.1 0' : ''))

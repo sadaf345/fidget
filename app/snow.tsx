@@ -9,13 +9,10 @@ import { accelerometer } from '@/lib/motion';
 import { createRng } from '@/lib/pick';
 import { Flake, Globe, makeFlakes, SETTLE_SECONDS, stepSnow, swirl } from '@/lib/snow';
 import ToyChrome from '@/components/ToyChrome';
-import { sound, useLoop } from '@/lib/sound/engine';
 
 const FLAKES = 90;
 // A reading this far from 1 g is a shake.
 const SHAKE_G = 0.8;
-// Twinkles pick notes from a pentatonic scale so they always sound gentle together.
-const TWINKLE_RATES = [1, 1.122, 1.26, 1.498, 1.682, 2];
 
 export default function SnowGlobeScreen() {
   const insets = useSafeAreaInsets();
@@ -24,7 +21,6 @@ export default function SnowGlobeScreen() {
   const rng = useRef(createRng(7)).current;
   const flakes = useRef<Flake[]>([]);
   const s = useRef({ energy: 0, gravity: { x: 0, y: 1 }, lastShake: 0 }).current;
-  const slosh = useLoop('brown', { type: 'lowpass', freq: 700, q: 1.5 });
 
   const globe = useMemo<Globe | null>(() => {
     if (area.width === 0) return null;
@@ -69,17 +65,8 @@ export default function SnowGlobeScreen() {
       stepSnow(flakes.current, globe, dt, s.gravity.x, s.gravity.y);
       // The rumble dies away over 3 s as the flakes settle.
       s.energy = Math.max(0, s.energy - dt / SETTLE_SECONDS);
-      if (s.energy > 0.01) {
-        continuous.set(0.6 * s.energy, 0.3);
-        slosh.set({ volume: 0.45 * s.energy, freq: 400 + 700 * s.energy });
-        // Flakes settling: the odd soft twinkle, rarer as it calms.
-        if (Math.random() < s.energy * 0.05) {
-          sound.play('twinkle', { volume: 0.2 + 0.4 * s.energy, rate: TWINKLE_RATES[Math.floor(Math.random() * TWINKLE_RATES.length)], vary: 0 });
-        }
-      } else {
-        continuous.stop();
-        slosh.stop(200);
-      }
+      if (s.energy > 0.01) continuous.set(0.6 * s.energy, 0.3);
+      else continuous.stop();
       // Redraw at 30 fps; the flakes move slowly enough.
       tick += 1;
       if (tick % 2 === 0) setFrame(f => f + 1);
@@ -91,9 +78,8 @@ export default function SnowGlobeScreen() {
       if (frame !== null) cancelAnimationFrame(frame);
       sub?.remove();
       continuous.stop();
-      slosh.stop();
     };
-  }, [globe, rng, s, shake, slosh]));
+  }, [globe, rng, s, shake]));
 
   const stir = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,

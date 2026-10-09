@@ -6,7 +6,6 @@ import { theme } from '@/constants/colors';
 import { transient } from '@/lib/haptics';
 import { angleAround, angleDelta, detentIntensity, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 import { useToyOption } from '@/contexts/SettingsContext';
-import { sound } from '@/lib/sound/engine';
 import Segmented from '@/components/ui/Segmented';
 import ToyChrome from '@/components/ToyChrome';
 
@@ -47,8 +46,6 @@ export default function DialScreen() {
       if (notch !== s.lastDetent) {
         s.lastDetent = notch;
         transient(detentIntensity(velocity), 0.8);
-        const fast = Math.min(1, Math.abs(velocity) / 1.5);
-        sound.play('detent', { volume: 0.5 + 0.5 * fast, rate: 0.9 + 0.35 * fast });
       }
     };
     const settle = () => {
@@ -138,7 +135,6 @@ export default function DialScreen() {
               s.angle += step;
               rotation.setValue(s.angle);
               transient(0.5, 0.8);
-              sound.play('detent');
             }}
           >
             <Animated.View pointerEvents="none" style={{ width: size, height: size, transform: [{ rotate: spin }] }}>

@@ -8,7 +8,6 @@ import { useToyOption } from '@/contexts/SettingsContext';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import Segmented from '@/components/ui/Segmented';
 import ToyChrome from '@/components/ToyChrome';
-import { sound, useLoop } from '@/lib/sound/engine';
 
 type PatternId = keyof typeof PATTERNS;
 
@@ -25,8 +24,6 @@ export default function BreatheScreen() {
   const [finished, setFinished] = useState(false);
   const [readout, setReadout] = useState({ label: 'Breathe in', count: 4, left: 0 });
   const size = useRef(new Animated.Value(0)).current;
-  // An airy breath: brighter and fuller on the way in, fading on the way out.
-  const breath = useLoop('noise', { type: 'bandpass', freq: 600, q: 0.7 });
   const s = useRef({ frame: null as number | null, started: 0, lastCount: -1, lastIndex: -1 }).current;
   const circle = Math.min(width * 0.72, 300);
 
@@ -34,15 +31,11 @@ export default function BreatheScreen() {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
     s.frame = null;
     continuous.stop();
-    breath.stop(300);
     setRunning(false);
     setFinished(completed);
     Animated.timing(size, { toValue: 0, duration: 600, useNativeDriver: true }).start();
-    if (completed) {
-      transient(0.4, 0.2);
-      sound.play('chime', { volume: 0.6 });
-    }
-  }, [s, size, breath]);
+    if (completed) transient(0.4, 0.2);
+  }, [s, size]);
 
   useEffect(() => () => {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
@@ -66,18 +59,10 @@ export default function BreatheScreen() {
       size.setValue(reduced ? (at.phase.kind === 'inhale' || breathSize(phases, at) === 1 ? 1 : 0) : breathSize(phases, at));
       if (at.phase.kind === 'hold') {
         // A faint pulse each second of the hold.
-        if (at.index !== s.lastIndex) {
-          continuous.stop();
-          breath.stop(250);
-        }
-        if (at.countdown !== s.lastCount) {
-          transient(0.1, 0.1);
-          sound.play('tick', { volume: 0.15, rate: 0.6, vary: 0 });
-        }
+        if (at.index !== s.lastIndex) continuous.stop();
+        if (at.countdown !== s.lastCount) transient(0.1, 0.1);
       } else {
         continuous.set(breathIntensity(at.phase.kind, at.progress), 0.2);
-        const swell = at.phase.kind === 'inhale' ? at.progress : 1 - at.progress;
-        breath.set({ volume: 0.05 + 0.3 * swell, freq: 500 + 900 * swell });
       }
       if (at.countdown !== s.lastCount || at.index !== s.lastIndex) {
         s.lastCount = at.countdown;

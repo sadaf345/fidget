@@ -4,7 +4,6 @@ import { HapticPower } from '@/types/fidget';
 import { playHaptic, playSequence } from '@/lib/haptics';
 import { Rumble } from '@/lib/rumble';
 import { coreHaptics } from '@/lib/coreHaptics';
-import { sound, useLoop } from '@/lib/sound/engine';
 import { angleAround, angleDelta } from '@/lib/spin';
 import { ChargeState, chargeIntensity, climaxPattern, initialCharge, RELEASE_PATTERN, stepCharge } from '@/lib/charge';
 
@@ -40,8 +39,6 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
   const [pressing, setPressing] = useState(false);
   const [combo, setCombo] = useState(0);
 
-  // The charge-up hum: a buzzy tone through a resonant filter that opens as it builds.
-  const hum = useLoop('buzz', { type: 'lowpass', freq: 400, q: 4 });
   const optionsRef = useRef({ center, disabled, hapticPower, onClimax });
   useEffect(() => {
     optionsRef.current = { center, disabled, hapticPower, onClimax };
@@ -88,22 +85,12 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
         else engine.rumble?.set(0);
         engine.cancelSequence?.();
         engine.cancelSequence = playSequence(climaxPattern(result.state.combo, !continuous));
-        hum.stop(25);
-        // Each repeat in one hold lands two semitones higher.
-        sound.play('boom', { rate: Math.pow(2, (Math.min(result.state.combo, 6) - 1) * (2 / 12)), vary: 0 });
         climax.setValue(0);
         Animated.timing(climax, { toValue: 1, duration: 750, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
         setCombo(result.state.combo);
         optionsRef.current.onClimax?.(result.state.combo);
       } else if (result.state.afterglowMs === 0) {
         engine.rumble?.set(chargeIntensity(result.state.level));
-        const level = result.state.level;
-        hum.set({
-          volume: level <= 0.001 ? 0 : 0.06 + 0.34 * Math.pow(level, 1.2),
-          rate: 0.55 + 1.45 * level,
-          freq: 350 + 4800 * Math.pow(level, 1.6),
-          q: 2 + 6 * level,
-        });
       }
       engine.frame = requestAnimationFrame(tick);
     };
@@ -121,9 +108,7 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
       if (engine.state.level > 0.2 && engine.state.afterglowMs === 0) {
         engine.cancelSequence?.();
         engine.cancelSequence = playSequence(RELEASE_PATTERN);
-        sound.play('exhale', { rate: 0.8 + 0.5 * engine.state.level });
       }
-      hum.stop();
       engine.state = initialCharge();
       setPressing(false);
       charge.stopAnimation();
@@ -146,7 +131,6 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
         setPressing(true);
         setCombo(0);
         playHaptic(optionsRef.current.hapticPower);
-        sound.play('bump', { volume: 0.6 });
         engine.frame = requestAnimationFrame(tick);
       },
       onPanResponderMove: (evt) => {
@@ -156,9 +140,7 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
           engine.wind += delta;
           engine.ratchet += delta;
           if (Math.abs(engine.ratchet) >= RATCHET_DEG) {
-            const wound = engine.ratchet > 0;
-            playHaptic(wound ? 'rigid' : 'soft');
-            sound.play('ratchet', wound ? { volume: 0.8, rate: 1.05 + 0.3 * engine.state.level } : { volume: 0.5, rate: 0.8 });
+            playHaptic(engine.ratchet > 0 ? 'rigid' : 'soft');
             engine.ratchet %= RATCHET_DEG;
           }
         }
@@ -167,7 +149,7 @@ export function useCharge({ center, disabled, hapticPower = 'medium', onClimax }
       onPanResponderRelease: end,
       onPanResponderTerminate: end,
     });
-  }, [engine, charge, pulse, climax, hum]);
+  }, [engine, charge, pulse, climax]);
 
   return { panHandlers: panResponder.panHandlers, charge, pulse, climax, pressing, combo };
 }
