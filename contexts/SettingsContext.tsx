@@ -13,7 +13,7 @@ export interface AppSettings {
   globalIntensity: number;
   /** Per-toy multiplier on top of the global one, by toy id. */
   toyIntensity: Record<string, number>;
-  /** Dims the screen to near-black, mutes sound, keeps the phone awake while a toy is open. */
+  /** Dims the screen to near-black and keeps the phone awake while a toy is open. */
   discreet: boolean;
   /** Toy ids, in the order they were favorited. */
   favorites: string[];

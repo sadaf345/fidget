@@ -162,7 +162,7 @@ function ToySettingsSheet({ toyId, discreet, setDiscreet, onClose, children }: {
           <View style={styles.row}>
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>Discreet mode</Text>
-              <Text style={styles.rowSub}>Dims the screen, mutes sound, keeps the phone awake.</Text>
+              <Text style={styles.rowSub}>Dims the screen and keeps the phone awake.</Text>
             </View>
             <Switch
               value={discreet}

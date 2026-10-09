@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, StatusBar, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { theme } from '@/constants/colors';
 import { INTENSITY_MAX, INTENSITY_MIN, useSettings } from '@/contexts/SettingsContext';
+import { PRIVACY_URL, SITE_URL, SUPPORT_EMAIL } from '@/constants/site';
 import { coreHaptics } from '@/lib/coreHaptics';
 import { playHaptic, transient } from '@/lib/haptics';
 import Slider from '@/components/ui/Slider';
@@ -54,8 +55,8 @@ export default function SettingsScreen() {
           <View style={styles.rowText}>
             <Text style={styles.rowTitle}>Discreet mode</Text>
             <Text style={styles.note}>
-              Dims toys to near-black (your brightness setting stays the same), mutes sound, and keeps the phone from locking
-              while a toy is open.
+              Dims toys to near-black (your brightness setting stays the same) and keeps the phone from locking while a toy
+              is open.
             </Text>
           </View>
           <Switch
@@ -91,9 +92,37 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <Text style={styles.rowTitle}>fidget {version}</Text>
           <Text style={styles.note}>By Rai Industries. No accounts, no ads, no tracking: nothing leaves your phone.</Text>
+          <Text style={styles.note}>
+            {"Made for restless hands, as something to pick, pop and spin instead. It isn't a medical treatment; if picking or other habits are hurting you, a doctor or therapist can help."}
+          </Text>
+        </View>
+        <View style={styles.links}>
+          <LinkRow title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+          <LinkRow title="Help and support" onPress={() => Linking.openURL(SITE_URL)} />
+          <LinkRow title="Email us" detail={SUPPORT_EMAIL} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} last />
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+function LinkRow({ title, detail, onPress, last }: { title: string; detail?: string; onPress: () => void; last?: boolean }) {
+  return (
+    <Pressable
+      onPress={() => {
+        playHaptic('selection');
+        onPress();
+      }}
+      accessibilityRole="link"
+      accessibilityLabel={title}
+      style={({ pressed }) => [styles.linkRow, !last && styles.linkDivider, pressed && { backgroundColor: theme.surfaceLight }]}
+    >
+      <Text style={styles.rowTitle}>{title}</Text>
+      <View style={styles.linkEnd}>
+        {detail ? <Text style={styles.note}>{detail}</Text> : null}
+        <ChevronRight size={18} color={theme.textMuted} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -171,6 +200,29 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surfaceLight,
     borderWidth: 1,
     borderColor: theme.border,
+  },
+  links: {
+    backgroundColor: theme.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+    overflow: 'hidden',
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  linkDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  linkEnd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   buttonText: {
     fontSize: 13,
