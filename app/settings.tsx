@@ -83,14 +83,14 @@ export default function SettingsScreen() {
         <Text style={styles.section}>Quick launch</Text>
         <View style={styles.card}>
           <Text style={styles.note}>
-            Every toy has a link, shown in its settings (for example fidget://pick). In the Shortcuts app, make a shortcut with
+            Every toy has a link, shown in its settings (for example fidgetr://pick). In the Shortcuts app, make a shortcut with
             Open URLs and that link, then add it to the Action Button, Control Center or the Lock Screen.
           </Text>
         </View>
 
         <Text style={styles.section}>About</Text>
         <View style={styles.card}>
-          <Text style={styles.rowTitle}>fidget {version}</Text>
+          <Text style={styles.rowTitle}>fidgetr {version}</Text>
           <Text style={styles.note}>By Rai Industries. No accounts, no ads, no tracking: nothing leaves your phone.</Text>
           <Text style={styles.note}>
             {"Made for restless hands, as something to pick, pop and spin instead. It isn't a medical treatment; if picking or other habits are hurting you, a doctor or therapist can help."}

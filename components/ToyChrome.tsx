@@ -210,7 +210,7 @@ function ToySettingsSheet({ toyId, discreet, setDiscreet, onClose, children }: {
               In the Shortcuts app, make a shortcut with Open URLs and this link. You can then put it on the Action Button,
               Control Center or the Lock Screen.
             </Text>
-            <Text selectable style={styles.link}>fidget://{toyId}</Text>
+            <Text selectable style={styles.link}>fidgetr://{toyId}</Text>
           </View>
         </ScrollView>
       </Animated.View>

@@ -22,7 +22,7 @@ type IconComponent = React.ComponentType<{ size?: number; color?: string; stroke
 
 export interface Toy {
   id: string;
-  /** Route, also the quick-launch link: fidget://<id>. */
+  /** Route, also the quick-launch link: fidgetr://<id>. */
   route: string;
   title: string;
   line: string;

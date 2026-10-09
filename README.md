@@ -1,4 +1,4 @@
-# fidget
+# fidgetr
 
 Something for your hands. A haptic fidget app for iPhone, built for redirecting restless hands: stimming, skin picking, scalp picking.
 
@@ -13,11 +13,11 @@ Something for your hands. A haptic fidget app for iPhone, built for redirecting 
 | Shake & tilt | Shake (marbles in a jar), Snow globe |
 | Calm | Breathe (box, 4-7-8), Heartbeat (50-80 bpm) |
 
-Also: **Favorites** (long-press a toy), **Settings** (global intensity, Discreet mode), **Haptics Lab** (every system haptic, plus custom intensity/sharpness and a pattern recorder whose patterns can replace the tap on the four tap toys), **Boards** (arrange widgets on a free-form board and save it), and **quick launch** links (`fidget://pick` and so on) for Shortcuts, the Action Button and Control Center.
+Also: **Favorites** (long-press a toy), **Settings** (global intensity, Discreet mode), **Haptics Lab** (every system haptic, plus custom intensity/sharpness and a pattern recorder whose patterns can replace the tap on the four tap toys), **Boards** (arrange widgets on a free-form board and save it), and **quick launch** links (`fidgetr://pick` and so on; the older `fidget://` links still work) for Shortcuts, the Action Button and Control Center.
 
 No accounts, ads, analytics or network calls; everything stays on the phone.
 
-Built with Expo (SDK 57) + React Native + Expo Router + TypeScript. Bundle ID `com.rai.fidget`.
+Built with Expo (SDK 57) + React Native + Expo Router + TypeScript. Bundle ID `com.rai.fidget`: the app is called fidgetr, but identifiers that can't change (bundle ID, EAS project, repo, storage keys) keep "fidget".
 
 ## Run it on your iPhone (day-to-day)
 
@@ -28,7 +28,7 @@ npm install        # first time, or after pulling changes to package.json
 npm start          # prints a QR code
 ```
 
-Scan the QR code with the iPhone Camera app and it opens in the **fidget** development build. Your phone and Mac must be on the same Wi-Fi network; if they can't be, run `npm run start:tunnel`. Every saved change reloads within a second or two. Shake the phone for the dev menu.
+Scan the QR code with the iPhone Camera app and it opens in the **fidgetr** development build (called "fidget" on builds made before the rename). Your phone and Mac must be on the same Wi-Fi network; if they can't be, run `npm run start:tunnel`. Every saved change reloads within a second or two. Shake the phone for the dev menu.
 
 To check which engine is running, open **Haptics Lab**: the Continuous section shows a Rumble Pad in the development build and a "Rich haptics: off" note in Expo Go.
 

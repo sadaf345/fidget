@@ -156,7 +156,7 @@ export default function HomeScreen() {
           <View style={styles.brandRow}>
             <View>
               <View style={styles.brandMark}>
-                <Text style={styles.brand} accessibilityRole="header">fidget</Text>
+                <Text style={styles.brand} accessibilityRole="header">fidgetr</Text>
                 <View style={styles.brandDot} />
               </View>
               <Text style={styles.tagline}>something for your hands</Text>

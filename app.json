@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "fidget",
+    "name": "fidgetr",
     "slug": "fidget",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fidget",
+    "scheme": ["fidgetr", "fidget"],
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0A0F",
     "ios": {
