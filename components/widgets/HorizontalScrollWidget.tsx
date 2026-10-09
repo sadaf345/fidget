@@ -3,6 +3,7 @@ import { View, StyleSheet, Animated, PanResponder } from 'react-native';
 import { theme } from '@/constants/colors';
 import { HapticPower } from '@/types/fidget';
 import { playHaptic } from '@/lib/haptics';
+import { sound } from '@/lib/sound/engine';
 import { mod, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 
 interface HorizontalScrollWidgetProps {
@@ -55,6 +56,7 @@ export default function HorizontalScrollWidget({ disabled, hapticPower = 'light'
         if (now - lastHapticRef.current >= MIN_HAPTIC_INTERVAL_MS) {
           lastHapticRef.current = now;
           playHaptic(hapticPowerRef.current);
+          sound.play('detent', { volume: 0.4, rate: 0.8 });
         }
       }
     };

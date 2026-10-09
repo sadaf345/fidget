@@ -5,6 +5,7 @@ import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { playEvents, transient } from '@/lib/haptics';
 import { useTapFeel } from '@/hooks/useTapFeel';
+import { sound } from '@/lib/sound/engine';
 import ToyChrome from '@/components/ToyChrome';
 
 const BARREL_W = 56;
@@ -30,6 +31,7 @@ export default function PenScreen() {
         transient(0.6, 0.5);
       }
     });
+    sound.play(next ? 'penIn' : 'penOut');
     plunger.setValue(1);
     Animated.spring(plunger, { toValue: 0, friction: 4, tension: 300, useNativeDriver: true }).start();
     Animated.spring(tip, { toValue: next ? 1 : 0, friction: 7, tension: 420, useNativeDriver: true }).start();

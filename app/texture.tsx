@@ -8,6 +8,7 @@ import { createRng } from '@/lib/pick';
 import { useToyOption } from '@/contexts/SettingsContext';
 import Segmented from '@/components/ui/Segmented';
 import ToyChrome from '@/components/ToyChrome';
+import { sound, useLoop } from '@/lib/sound/engine';
 
 type Texture = 'corduroy' | 'sandpaper' | 'stone';
 
@@ -22,6 +23,8 @@ export default function TextureScreen() {
   const { width, height } = useWindowDimensions();
   const [texture, setTexture] = useToyOption<Texture>('texture', 'kind', 'corduroy');
   const offset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const rasp = useLoop('noise', { type: 'highpass', freq: 2800 });
+  const hush = useLoop('brown', { type: 'lowpass', freq: 450 });
   const s = useRef({
     last: { x: 0, y: 0 },
     start: { x: 0, y: 0 },
@@ -34,7 +37,9 @@ export default function TextureScreen() {
   useEffect(() => {
     s.texture = texture;
     continuous.stop();
-  }, [texture, s]);
+    rasp.stop();
+    hush.stop();
+  }, [texture, s, rasp, hush]);
 
   useEffect(() => () => {
     if (s.idle) clearTimeout(s.idle);
@@ -56,12 +61,15 @@ export default function TextureScreen() {
           if (t >= 1) {
             stopFade();
             continuous.stop();
+            hush.stop(30);
           } else {
             continuous.set(0.2 * (1 - t), 0.1);
+            hush.set({ volume: 0.3 * (1 - t) });
           }
         }, 16);
       } else {
         continuous.stop();
+        rasp.stop(40);
       }
     };
 
@@ -92,12 +100,15 @@ export default function TextureScreen() {
           while (s.travel >= RIB_PITCH) {
             s.travel -= RIB_PITCH;
             transient(0.4, 0.5);
+            sound.play('rib', { vary: 0.1 });
           }
         } else if (s.texture === 'sandpaper') {
           const jitter = 0.85 + Math.random() * 0.3;
           continuous.set(Math.min(0.4, speed * 0.35) * jitter, 0.9);
+          rasp.set({ volume: Math.min(0.55, speed * 0.45) * jitter, freq: 2400 + speed * 1500 });
         } else {
           continuous.set(0.2, 0.1);
+          hush.set({ volume: 0.3, freq: 350 + Math.min(1, speed) * 250 });
         }
         if (s.idle) clearTimeout(s.idle);
         s.idle = setTimeout(onIdle, IDLE_MS);
@@ -110,10 +121,12 @@ export default function TextureScreen() {
       onPanResponderTerminate: () => {
         stopFade();
         continuous.stop();
+        rasp.stop();
+        hush.stop();
         offset.setValue({ x: 0, y: 0 });
       },
     });
-  }, [s, offset]);
+  }, [s, offset, rasp, hush]);
 
   return (
     <View style={styles.root}>

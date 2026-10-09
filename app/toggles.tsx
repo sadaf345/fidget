@@ -5,6 +5,7 @@ import { RotateCcw } from 'lucide-react-native';
 import { theme } from '@/constants/colors';
 import { transient } from '@/lib/haptics';
 import { useTapFeel } from '@/hooks/useTapFeel';
+import { sound } from '@/lib/sound/engine';
 import ToyChrome from '@/components/ToyChrome';
 
 type Kind = 'toggle' | 'light' | 'rocker';
@@ -32,6 +33,9 @@ export default function ToggleWallScreen() {
     setOn(next);
     const rocker = KINDS[index] === 'rocker';
     tapFeel(() => (next[index] ? transient(0.7, rocker ? 0.4 : 0.8) : transient(0.6, rocker ? 0.4 : 0.6)));
+    // Each kind has its own sound; on is pitched a touch higher than off.
+    const kind = KINDS[index];
+    sound.play(kind === 'toggle' ? 'toggle' : kind === 'light' ? 'lightSwitch' : 'rocker', { rate: next[index] ? 1.06 : 0.94 });
     Animated.spring(anims[index], { toValue: next[index] ? 1 : 0, friction: 7, tension: 320, useNativeDriver: true }).start();
   }, [anims, tapFeel]);
 

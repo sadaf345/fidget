@@ -39,3 +39,6 @@ yarn-error.*
 .vercel
 
 .env
+
+# Rendered sound previews (npm run sounds)
+sound-preview/

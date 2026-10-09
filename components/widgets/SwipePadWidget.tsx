@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { HapticPower } from '@/types/fidget';
 import { playHaptic } from '@/lib/haptics';
+import { sound } from '@/lib/sound/engine';
 
 const MAX_OFFSET = 50;
 // Pulses get closer together the farther the knob is pushed from center.
@@ -35,6 +36,7 @@ export default function SwipePadWidget({ disabled, hapticPower = 'medium' }: Swi
     const atEdge = Math.abs(knobX) >= MAX_OFFSET || Math.abs(knobY) >= MAX_OFFSET;
     if (atEdge && !atEdgeRef.current) {
       playHaptic('rigid');
+      sound.play('thud', { volume: 0.5 });
       hapticCooldownRef.current = now;
     }
     atEdgeRef.current = atEdge;
@@ -50,6 +52,7 @@ export default function SwipePadWidget({ disabled, hapticPower = 'medium' }: Swi
     lastPositionRef.current = { x: dx, y: dy };
     hapticCooldownRef.current = now;
     playHaptic(hapticPowerRef.current);
+    sound.play('tick', { volume: 0.3, rate: 1.2 });
   }, []);
 
   const panResponder = useMemo(() =>

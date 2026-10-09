@@ -15,6 +15,8 @@ Something for your hands. A haptic fidget app for iPhone, built for redirecting 
 
 Also: **Favorites** (long-press a toy), **Settings** (global intensity, Discreet mode), **Haptics Lab** (every system haptic, plus custom intensity/sharpness and a pattern recorder whose patterns can replace the tap on the four tap toys), **Boards** (arrange widgets on a free-form board and save it), and **quick launch** links (`fidget://pick` and so on) for Shortcuts, the Action Button and Control Center.
 
+Every toy has its own synthesized sounds (switch clicks, pop-it pops tuned to a pentatonic scale, the zipper's buzz, a purr, Charge's rising hum and boom...). The speaker button on any toy mutes all sounds; each toy can also be muted on its own, sounds follow the silent switch, and Discreet mode mutes them.
+
 No accounts, ads, analytics or network calls; everything stays on the phone.
 
 Built with Expo (SDK 57) + React Native + Expo Router + TypeScript. Bundle ID `com.rai.fidget`.
@@ -59,6 +61,17 @@ This builds the app in Expo's cloud (EAS Build), uploads it to App Store Connect
 
 If App Store Connect rejects the upload because the build number was already used (by an earlier Rork build), run `npx eas-cli@latest build:version:set` and enter a number higher than the last build in TestFlight.
 
+## Sounds
+
+Every sound is synthesized in code (`lib/sound/recipes.ts`), so there are no audio files to manage. To hear them on your Mac without building the app:
+
+```bash
+npm run sounds              # plays every sound in turn, with its name
+npm run sounds -- pop thock # just those
+```
+
+The WAV files land in `sound-preview/` (not committed). Sound needs the app's own build: Expo Go and builds made before October 2026 are silent.
+
 ## Checks
 
 ```bash
@@ -92,9 +105,11 @@ lib/                    Pure logic, unit-tested in lib/__tests__/
   coreHaptics.tsx       Core Haptics via react-native-pulsar, when the native module exists
   hapticState.ts        Intensity multipliers, active toy, stop-everything
   rumble.ts             Build-up vibration for Charge and Pick
+  sound/                The sound service (engine.ts), synthesizer (dsp.ts) and every sound (recipes.ts)
   motion.ts             Accelerometer (guarded for builds without it)
   charge pick pop peel thread scratch slime squish zipper spin rattle snow breathe glass patterns board links
 scripts/screenshot.mjs  Screenshot the web preview at phone size
+scripts/sounds.ts       Render and play every sound on a Mac (npm run sounds)
 ```
 
 Data is stored on-device only (AsyncStorage). The storage keys are the same ones the original build used, so existing boards keep working.

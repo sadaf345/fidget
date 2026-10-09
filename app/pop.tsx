@@ -5,12 +5,17 @@ import { RefreshCcw } from 'lucide-react-native';
 import { theme } from '@/constants/colors';
 import { playHaptic, playSequence } from '@/lib/haptics';
 import { cellAt, layoutGrid } from '@/lib/pop';
+import { sound } from '@/lib/sound/engine';
 import { mixColor } from '@/lib/color';
 import { useStat } from '@/hooks/useStat';
 import ToyChrome from '@/components/ToyChrome';
 
 const ROW_COLORS = ['#FF6B6B', '#FF9F43', '#FECA57', '#A3E635', '#1DD1A1', '#2ED3D3', '#54A0FF', '#7C6CF2', '#FF7EC8'];
 const SIDE_MARGIN = 16;
+// Each row pops on a note of the major pentatonic scale, low at the bottom, high at the top,
+// so sweeping across the sheet plays a little melody and no combination ever sounds wrong.
+const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+const popRate = (row: number, rows: number) => 0.8 * Math.pow(2, PENTATONIC[Math.max(0, rows - 1 - row) % PENTATONIC.length] / 12);
 
 export default function PopScreen() {
   const insets = useSafeAreaInsets();
@@ -51,6 +56,8 @@ export default function PopScreen() {
       { at: 200, power: 'success' },
       { at: 340, power: 'soft' },
     ]);
+    sound.play('flip');
+    sound.play('reward', { volume: 0.5, delay: 300 });
     Animated.timing(flip, { toValue: 1, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
       // Edge-on to the viewer: swap to the fresh side, then finish turning.
       setPoppedBoth(Array(count).fill(false));
@@ -65,13 +72,17 @@ export default function PopScreen() {
   const popCell = useCallback((index: number, direct: boolean) => {
     if (index < 0 || flipping.current) return;
     if (poppedRef.current[index]) {
-      if (direct) playHaptic('soft');
+      if (direct) {
+        playHaptic('soft');
+        sound.play('dud', { volume: 0.6 });
+      }
       return;
     }
     playSequence([
       { at: 0, power: 'rigid' },
       { at: 18, power: 'soft' },
     ]);
+    sound.play('pop', { rate: popRate(Math.floor(index / layout.cols), layout.rows), vary: 0.015 });
     squash[index].setValue(0.8);
     Animated.spring(squash[index], { toValue: 1, friction: 4, tension: 180, useNativeDriver: true }).start();
     const next = poppedRef.current.slice();
@@ -79,7 +90,7 @@ export default function PopScreen() {
     setPoppedBoth(next);
     addPops();
     if (next.every(Boolean)) setTimeout(flipSheet, 260);
-  }, [squash, setPoppedBoth, addPops, flipSheet]);
+  }, [squash, setPoppedBoth, addPops, flipSheet, layout.cols, layout.rows]);
 
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,

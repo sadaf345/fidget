@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/constants/colors';
 import { transient } from '@/lib/haptics';
 import { useTapFeel } from '@/hooks/useTapFeel';
+import { sound } from '@/lib/sound/engine';
 import { useStat } from '@/hooks/useStat';
 import ToyChrome from '@/components/ToyChrome';
 
@@ -53,6 +54,7 @@ export default function TallyScreen() {
 
   const increment = () => {
     tapFeel(() => transient(0.6, 0.7));
+    sound.play('tally');
     count.add(1);
     plunger.setValue(1);
     Animated.spring(plunger, { toValue: 0, friction: 4, tension: 260, useNativeDriver: true }).start();
@@ -64,6 +66,7 @@ export default function TallyScreen() {
     Animated.timing(resetProgress, { toValue: 1, duration: RESET_HOLD_MS, easing: Easing.linear, useNativeDriver: true }).start();
     resetTimer.current = setTimeout(() => {
       transient(1.0, 0.2);
+      sound.play('tallyReset');
       count.set(0);
       setHoldingReset(false);
     }, RESET_HOLD_MS);

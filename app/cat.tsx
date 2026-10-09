@@ -7,6 +7,7 @@ import { continuous } from '@/lib/haptics';
 import { purrIntensity } from '@/lib/squish';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import ToyChrome from '@/components/ToyChrome';
+import { sound, useLoop } from '@/lib/sound/engine';
 
 const FADE_MS = 300;
 const EYES_CLOSE_MS = 2200;
@@ -19,6 +20,7 @@ export default function CatScreen() {
   const eyes = useRef(new Animated.Value(0)).current;
   const breathe = useRef(new Animated.Value(0)).current;
   const s = useRef({ frame: null as number | null, began: 0, releasedAt: 0, level: 0 }).current;
+  const purrSound = useLoop('purr');
 
   useEffect(() => () => {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
@@ -32,10 +34,12 @@ export default function CatScreen() {
       const fade = s.releasedAt ? Math.max(0, 1 - (now - s.releasedAt) / FADE_MS) : 1;
       if (fade <= 0) {
         continuous.stop();
+        purrSound.stop(40);
         s.frame = null;
         return;
       }
       continuous.set(purr * fade, 0.05);
+      purrSound.set({ volume: (0.2 + 0.9 * (purr - 0.3)) * fade, rate: 0.95 + 0.1 * (purr - 0.3) });
       breathe.setValue((purr - 0.3) / 0.3);
       s.frame = requestAnimationFrame(tick);
     };
@@ -43,6 +47,8 @@ export default function CatScreen() {
   };
 
   const press = () => {
+    // A little "mrrp" hello when you first touch it.
+    if (s.frame === null) sound.play('chirp', { rate: 0.9 + Math.random() * 0.25 });
     setHeld(true);
     s.began = Date.now();
     s.releasedAt = 0;

@@ -8,6 +8,18 @@ import { continuous, HapticEvent, playEvents, playHaptic, transient } from '@/li
 import { fromAhap, MAX_RECORDING_MS, patternDurationMs, toAhap } from '@/lib/patterns';
 import Segmented from '@/components/ui/Segmented';
 import Slider from '@/components/ui/Slider';
+import { sound, useLoop } from '@/lib/sound/engine';
+
+/** A click that sounds like the haptic: sharper is higher, stronger is louder. */
+function tapSound(intensity: number, sharpness: number, delay = 0) {
+  sound.play('click', { volume: 0.25 + 0.9 * intensity, rate: 0.45 + 1.35 * sharpness, delay, vary: 0.02 });
+}
+
+/** Plays a recorded pattern with a matching click for every tap. */
+function playWithSound(events: HapticEvent[]) {
+  playEvents(events);
+  events.forEach(e => tapSound(e.intensity, e.sharpness, e.time));
+}
 
 type Mode = 'transient' | 'continuous';
 
@@ -31,6 +43,7 @@ export default function CustomLab({ onPadActive }: CustomLabProps) {
   const progress = useRef(new Animated.Value(0)).current;
   const rec = useRef({ start: 0, events: [] as HapticEvent[], timer: null as ReturnType<typeof setTimeout> | null }).current;
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tone = useLoop('noise', { type: 'bandpass', freq: 1500, q: 3 });
 
   useEffect(() => () => {
     if (rec.timer) clearTimeout(rec.timer);
@@ -76,14 +89,20 @@ export default function CustomLab({ onPadActive }: CustomLabProps) {
       }
       rec.events.push({ time: now - rec.start, intensity, sharpness });
       transient(intensity, sharpness);
+      tapSound(intensity, sharpness);
       return;
     }
     if (mode === 'transient') {
       transient(intensity, sharpness);
+      tapSound(intensity, sharpness);
     } else {
       continuous.set(intensity, sharpness);
+      tone.set({ volume: 0.1 + 0.4 * intensity, freq: 250 + 5000 * sharpness, q: 2 + 6 * sharpness });
       if (holdTimer.current) clearTimeout(holdTimer.current);
-      holdTimer.current = setTimeout(() => continuous.stop(), durationMs);
+      holdTimer.current = setTimeout(() => {
+        continuous.stop();
+        tone.stop(40);
+      }, durationMs);
     }
   };
 
@@ -92,6 +111,7 @@ export default function CustomLab({ onPadActive }: CustomLabProps) {
     if (mode === 'continuous' && !recording) {
       if (holdTimer.current) clearTimeout(holdTimer.current);
       continuous.stop();
+      tone.stop(40);
     }
   };
 
@@ -169,7 +189,7 @@ export default function CustomLab({ onPadActive }: CustomLabProps) {
             accessibilityLabel="Pattern name"
           />
           <View style={styles.draftButtons}>
-            <Pressable onPress={() => playEvents(draft)} style={styles.smallButton} accessibilityRole="button" accessibilityLabel="Preview">
+            <Pressable onPress={() => playWithSound(draft)} style={styles.smallButton} accessibilityRole="button" accessibilityLabel="Preview">
               <Play size={14} color={theme.text} />
             </Pressable>
             <Pressable onPress={() => setDraft(null)} style={styles.smallButton} accessibilityRole="button">
@@ -215,7 +235,7 @@ export default function CustomLab({ onPadActive }: CustomLabProps) {
                     <Text style={styles.rowMeta}>{taps} {taps === 1 ? 'tap' : 'taps'} · {seconds}s</Text>
                   </View>
                 )}
-                <Pressable onPress={() => playEvents(fromAhap(p.ahap))} style={styles.icon} accessibilityRole="button" accessibilityLabel={`Play ${p.name}`}>
+                <Pressable onPress={() => playWithSound(fromAhap(p.ahap))} style={styles.icon} accessibilityRole="button" accessibilityLabel={`Play ${p.name}`}>
                   <Play size={16} color={theme.text} />
                 </Pressable>
                 {isEditing ? (

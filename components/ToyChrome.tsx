@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Animated } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { ChevronLeft, Settings2, X } from 'lucide-react-native';
+import { ChevronLeft, Settings2, Volume2, VolumeX, X } from 'lucide-react-native';
 import { theme } from '@/constants/colors';
 import { TOYS_BY_ID } from '@/constants/toys';
 import { INTENSITY_MAX, INTENSITY_MIN, useSettings } from '@/contexts/SettingsContext';
@@ -35,7 +35,7 @@ export default function ToyChrome({ toyId, stat, tone = 'light', keepAwake = fal
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toy = TOYS_BY_ID[toyId];
-  const { settings, setDiscreet } = useSettings();
+  const { settings, setDiscreet, setSound } = useSettings();
   const [sheetOpen, setSheetOpen] = useState(false);
   const discreet = settings.discreet;
 
@@ -89,6 +89,18 @@ export default function ToyChrome({ toyId, stat, tone = 'light', keepAwake = fal
           <Pressable
             onPress={() => {
               playHaptic('light');
+              setSound(!settings.sound);
+            }}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={settings.sound ? 'Mute all sounds' : 'Turn sounds on'}
+            style={({ pressed }) => [styles.round, { backgroundColor: pill, opacity: pressed ? 0.6 : 1 }]}
+          >
+            {settings.sound ? <Volume2 size={18} color={fg} /> : <VolumeX size={18} color={fg} />}
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              playHaptic('light');
               setSheetOpen(true);
             }}
             hitSlop={10}
@@ -119,7 +131,8 @@ function ToySettingsSheet({ toyId, discreet, setDiscreet, onClose, children }: {
 }) {
   const insets = useSafeAreaInsets();
   const toy = TOYS_BY_ID[toyId];
-  const { settings, setToyIntensity, patterns, setTapPattern } = useSettings();
+  const { settings, setToyIntensity, patterns, setTapPattern, setToySoundMuted } = useSettings();
+  const toyMuted = settings.toySoundMuted[toyId] ?? false;
   const intensity = settings.toyIntensity[toyId] ?? 1;
   const assigned = settings.tapPatterns[toyId] ?? null;
   const slide = React.useRef(new Animated.Value(0)).current;
@@ -172,6 +185,24 @@ function ToySettingsSheet({ toyId, discreet, setDiscreet, onClose, children }: {
               }}
               trackColor={{ true: theme.accent, false: theme.border }}
               accessibilityLabel="Discreet mode"
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>Sound for this toy</Text>
+              <Text style={styles.rowSub}>
+                {settings.sound ? 'The speaker button up top mutes every toy.' : 'All sounds are off (the speaker button up top).'}
+              </Text>
+            </View>
+            <Switch
+              value={!toyMuted}
+              onValueChange={on => {
+                playHaptic('light');
+                setToySoundMuted(toyId, !on);
+              }}
+              trackColor={{ true: theme.accent, false: theme.border }}
+              accessibilityLabel="Sound for this toy"
             />
           </View>
 

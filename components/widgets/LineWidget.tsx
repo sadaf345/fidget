@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/colors';
 import { HapticPower, LineThickness, DrawPoint } from '@/types/fidget';
 import { playHaptic } from '@/lib/haptics';
+import { sound } from '@/lib/sound/engine';
 
 interface LineWidgetProps {
   disabled?: boolean;
@@ -197,6 +198,7 @@ export default function LineWidget({
           const interval = getHapticInterval(speed);
           if (now - lastHapticTime.current >= interval) {
             playHaptic(hapticPowerRef.current);
+            sound.play('rib', { volume: 0.45 });
             lastHapticTime.current = now;
           }
           lastProgress.current = progress;

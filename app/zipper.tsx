@@ -6,6 +6,7 @@ import { theme } from '@/constants/colors';
 import { continuous, transient } from '@/lib/haptics';
 import { teethPerSecond, TOOTH_PITCH, toothIntensity, toothSpread } from '@/lib/zipper';
 import ToyChrome from '@/components/ToyChrome';
+import { sound, useLoop } from '@/lib/sound/engine';
 
 const TAPE_W = 40;
 const TOOTH_W = 13;
@@ -21,6 +22,8 @@ export default function ZipperScreen() {
   const [track, setTrack] = useState({ width: 0, height: 0 });
   const [pull, setPull] = useState(0);
   const s = useRef({ pull: 0, start: 0, lastTooth: 0, lastMove: 0, atEnd: true as boolean, buzzing: false }).current;
+  // The "zzzip": a buzz whose pitch is the rate the teeth go by (the loop's own tone is 110 Hz).
+  const zip = useLoop('buzz', { type: 'bandpass', freq: 2400, q: 0.8 });
   const length = Math.max(0, track.height - PULL_H);
 
   const panResponder = useMemo(() => PanResponder.create({
@@ -44,7 +47,11 @@ export default function ZipperScreen() {
       if (tooth !== s.lastTooth) {
         s.lastTooth = tooth;
         transient(toothIntensity(speed), 0.7);
+        sound.play('zipTick', { volume: 0.5 + 0.4 * Math.min(1, Math.abs(speed) / 1.2), vary: 0.08 });
       }
+      const rate = teethPerSecond(speed);
+      if (rate > 25) zip.set({ volume: Math.min(0.55, 0.12 + rate / 400), rate: Math.min(3, rate / 110), freq: 1800 + rate * 8 });
+      else zip.stop(60);
       if (teethPerSecond(speed) > BUZZ_TEETH_PER_SECOND) {
         s.buzzing = true;
         continuous.set(0.35 + 0.35 * Math.min(1, Math.abs(speed) / 2), 0.7);
@@ -53,18 +60,23 @@ export default function ZipperScreen() {
         continuous.stop();
       }
       const atEnd = next <= 0 || next >= length;
-      if (atEnd && !s.atEnd) transient(1.0, 0.3);
+      if (atEnd && !s.atEnd) {
+        transient(1.0, 0.3);
+        sound.play('zipEnd');
+      }
       s.atEnd = atEnd;
     },
     onPanResponderRelease: () => {
       s.buzzing = false;
       continuous.stop();
+      zip.stop();
     },
     onPanResponderTerminate: () => {
       s.buzzing = false;
       continuous.stop();
+      zip.stop();
     },
-  }), [s, length]);
+  }), [s, length, zip]);
 
   const cx = track.width / 2;
   const pullCenter = pull + PULL_H / 2;

@@ -7,6 +7,7 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
 import { coreHaptics } from '@/lib/coreHaptics';
+import { sound } from '@/lib/sound/engine';
 import { mixColor } from '@/lib/color';
 import { beadAcceleration, Bead, flick, Impact, stepRattle } from '@/lib/rattle';
 import { useStat } from '@/hooks/useStat';
@@ -95,6 +96,9 @@ export default function ShakeScreen() {
       } else {
         playHaptic(force > 0.5 ? 'rigid' : 'light');
       }
+      // Glass clicks between marbles, duller knocks off the jar; a wide pitch spread so a
+      // rattle sounds like many different marbles.
+      sound.play(strongest.kind === 'wall' ? 'marbleWall' : 'marble', { volume: 0.25 + 0.75 * force, vary: 0.15 });
     };
 
     const tick = (ts: number) => {
@@ -130,6 +134,7 @@ export default function ShakeScreen() {
       onPanResponderGrant: evt => {
         flick(beads.current, evt.nativeEvent.locationX, evt.nativeEvent.locationY, 170, 1500);
         playHaptic('light');
+        sound.play('tick', { volume: 0.4 });
       },
       onPanResponderMove: evt => {
         const now = Date.now();

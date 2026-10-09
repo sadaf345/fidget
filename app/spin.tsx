@@ -5,6 +5,7 @@ import Svg, { Circle, Defs, G, Line, LinearGradient, Stop } from 'react-native-s
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
 import { coreHaptics } from '@/lib/coreHaptics';
+import { sound, useLoop } from '@/lib/sound/engine';
 import { angleAround, angleDelta, releaseVelocity, Sample, startMomentum } from '@/lib/spin';
 import { useStat } from '@/hooks/useStat';
 import ToyChrome from '@/components/ToyChrome';
@@ -29,6 +30,7 @@ export default function SpinScreen() {
   const { add: addTurns, value: turns } = useStat('spin.turns');
   const [rpm, setRpm] = useState(0);
 
+  const whir = useLoop('whir', { type: 'bandpass', freq: 700, q: 1.2 });
   const rotation = useRef(new Animated.Value(0)).current;
   const blur = useRef(new Animated.Value(0)).current;
   const s = useRef({
@@ -67,6 +69,9 @@ export default function SpinScreen() {
       const speed = Math.abs(velocity);
       if (speed > 0.15) coreHaptics.set(Math.min(0.6, 0.1 + speed * 0.12), Math.min(0.9, 0.25 + speed * 0.11));
       else coreHaptics.stop();
+      // The bearing sings higher and brighter as it speeds up.
+      if (speed > 0.08) whir.set({ volume: Math.min(0.5, speed * 0.16), rate: Math.min(2.4, 0.45 + speed * 0.35), freq: 500 + speed * 650 });
+      else whir.stop(120);
 
       const tick = Math.floor(deg / TICK_DEG);
       if (tick !== s.lastTick) {
@@ -76,6 +81,8 @@ export default function SpinScreen() {
           s.lastHaptic = now;
           const speed = Math.abs(velocity);
           playHaptic(speed > 2 ? 'soft' : speed > 0.7 ? 'light' : 'medium');
+          // Each lobe ticks past as it winds down.
+          if (speed < 0.9) sound.play('detent', { volume: 0.35 + 0.3 * (0.9 - speed), rate: 0.7 + speed * 0.4 });
         }
       }
       if (Math.abs(deg - s.turnMark) >= 360) {
@@ -85,6 +92,7 @@ export default function SpinScreen() {
     };
 
     const stop = () => {
+      whir.stop(60);
       s.cancel?.();
       s.cancel = null;
       s.velocity = 0;
@@ -99,7 +107,10 @@ export default function SpinScreen() {
       onPanResponderGrant: (evt) => {
         const wasSpinning = s.cancel !== null;
         stop();
-        if (wasSpinning) playHaptic('rigid');
+        if (wasSpinning) {
+          playHaptic('rigid');
+          sound.play('clack', { rate: 0.75 });
+        }
         s.fingerAngle = angleAround(center, center, evt.nativeEvent.locationX, evt.nativeEvent.locationY);
         s.samples = [{ t: Date.now(), value: s.angle }];
       },
@@ -118,6 +129,7 @@ export default function SpinScreen() {
           s.velocity = 0;
           blur.setValue(0);
           coreHaptics.stop();
+          whir.stop();
           return;
         }
         playHaptic('medium');
@@ -135,6 +147,7 @@ export default function SpinScreen() {
             s.velocity = 0;
             blur.setValue(0);
             coreHaptics.stop();
+            whir.stop(200);
           },
         });
       },
@@ -143,7 +156,7 @@ export default function SpinScreen() {
         coreHaptics.stop();
       },
     });
-  }, [s, rotation, blur, center, addTurns]);
+  }, [s, rotation, blur, center, addTurns, whir]);
 
   const spin = rotation.interpolate({ inputRange: [-360, 0, 360], outputRange: ['-360deg', '0deg', '360deg'] });
 

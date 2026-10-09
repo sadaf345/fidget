@@ -9,6 +9,7 @@ import { peelShapes, pointsString, Rect as Sheet } from '@/lib/peel';
 import { useToyOption } from '@/contexts/SettingsContext';
 import Segmented from '@/components/ui/Segmented';
 import ToyChrome from '@/components/ToyChrome';
+import { sound, useLoop } from '@/lib/sound/engine';
 
 type Material = 'film' | 'tape';
 
@@ -50,6 +51,8 @@ export default function PeelScreen() {
   const [finger, setFinger] = useState<Point>({ x: 0, y: 0 });
   const [gone, setGone] = useState<{ flap: Point[]; attached: Point[]; dir: Point } | null>(null);
   const fly = useRef(new Animated.Value(0)).current;
+  // The pull itself: a smooth hiss for film, a coarser rip for tape.
+  const hiss = useLoop('noise', { type: 'bandpass', freq: 2500, q: 0.6 });
   const slideIn = useRef(new Animated.Value(1)).current;
 
   const s = useRef({
@@ -90,6 +93,8 @@ export default function PeelScreen() {
     const finish = (shapes: ReturnType<typeof peelShapes>, dir: Point) => {
       s.peeling = false;
       continuous.stop();
+      hiss.stop(30);
+      sound.play('peelOff', { rate: s.material === 'film' ? 1.1 : 0.85 });
       transient(0.9, 0.4);
       playEvents([{ time: 90, intensity: 0.4, sharpness: 0.3 }]);
       setGone({ flap: shapes.flap, attached: shapes.attached, dir });
@@ -115,6 +120,7 @@ export default function PeelScreen() {
         s.last = { x: evt.nativeEvent.locationX, y: evt.nativeEvent.locationY };
         s.lastTime = Date.now();
         transient(0.5, 0.7);
+        sound.play('catch', { volume: 0.6 });
       },
       onPanResponderMove: evt => {
         if (!s.peeling) return;
@@ -141,30 +147,41 @@ export default function PeelScreen() {
           if (s.travel >= s.nextCatch) {
             s.nextCatch = s.travel + 40 + Math.random() * 80;
             s.dipUntil = now + 50;
-            setTimeout(() => transient(0.7, 0.8), 50);
+            setTimeout(() => {
+              transient(0.7, 0.8);
+              sound.play('snag', { volume: 0.8, vary: 0.12 });
+            }, 50);
           }
           continuous.set(now < s.dipUntil ? 0.03 : 0.3 * pace, 0.6);
+          hiss.set({ volume: now < s.dipUntil ? 0.02 : Math.min(0.45, 0.1 + 0.15 * pace), freq: 2000 + 900 * pace, q: 0.6 });
         } else {
           // Tape crackles as the adhesive lets go.
           continuous.set(Math.min(0.8, 0.5 * pace), 0.8);
+          hiss.set({ volume: Math.min(0.5, 0.15 + 0.15 * pace), freq: 1300 + 500 * pace, q: 1 });
           if (now >= s.nextCrackle) {
             s.nextCrackle = now + 25 + Math.random() * 55;
             transient(0.2 + Math.random() * 0.2, 0.9);
+            sound.play('crackle', { volume: 0.4 + Math.random() * 0.5, rate: 0.7 + Math.random() * 0.8, vary: 0 });
           }
         }
         if (s.idle) clearTimeout(s.idle);
-        s.idle = setTimeout(() => continuous.stop(), IDLE_MS);
+        s.idle = setTimeout(() => {
+          continuous.stop();
+          hiss.stop(60);
+        }, IDLE_MS);
       },
       onPanResponderRelease: () => {
         s.peeling = false;
         continuous.stop();
+        hiss.stop();
       },
       onPanResponderTerminate: () => {
         s.peeling = false;
         continuous.stop();
+        hiss.stop();
       },
     });
-  }, [s, fly, slideIn]);
+  }, [s, fly, slideIn, hiss]);
 
   const shapes = stage.width > 0 ? peelShapes(rect, corner, finger) : null;
   const film = material === 'film';

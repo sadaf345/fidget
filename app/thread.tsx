@@ -8,6 +8,7 @@ import { createRng, Point } from '@/lib/pick';
 import { mixColor } from '@/lib/color';
 import { makeResists, pullThread, ThreadState } from '@/lib/thread';
 import ToyChrome from '@/components/ToyChrome';
+import { sound, useLoop } from '@/lib/sound/engine';
 
 const COLS = 8;
 const ROWS = 10;
@@ -47,6 +48,7 @@ export default function ThreadScreen() {
   const [knit, setKnit] = useState({ done: 0, patch: 0 });
   const [end, setEnd] = useState<Point | null>(null);
   const appear = useRef(new Animated.Value(1)).current;
+  const strain = useLoop('creak');
   const s = useRef({
     state: { done: 0, pull: 0 } as ThreadState,
     resists: makeResists(COUNT, createRng(1)),
@@ -74,7 +76,9 @@ export default function ThreadScreen() {
   const panResponder = useMemo(() => {
     const newPatch = () => {
       continuous.stop();
+      strain.stop(30);
       playHaptic('success');
+      sound.play('chime', { volume: 0.7 });
       s.patch += 1;
       s.state = { done: 0, pull: 0 };
       s.resists = makeResists(COUNT, createRng(s.patch + 1));
@@ -99,6 +103,7 @@ export default function ThreadScreen() {
         s.end = at;
         setEnd(at);
         transient(0.3, 0.5);
+        sound.play('tick', { volume: 0.5, rate: 0.7 });
       },
       onPanResponderMove: evt => {
         const at = { x: evt.nativeEvent.locationX, y: evt.nativeEvent.locationY };
@@ -114,13 +119,21 @@ export default function ThreadScreen() {
         const before = s.state.done;
         s.state = r.state;
         for (const e of r.events) {
-          if (e === 'tug') transient(0.6, 0.5);
+          if (e === 'tug') {
+            transient(0.6, 0.5);
+            sound.play('tug', { vary: 0.1 });
+          }
           if (e === 'give') {
             continuous.stop();
+            strain.stop(20);
             transient(0.8, 0.6);
+            sound.play('snap');
           }
         }
-        if (r.tension > 0) continuous.set(0.15 + 0.45 * r.tension, 0.5);
+        if (r.tension > 0) {
+          continuous.set(0.15 + 0.45 * r.tension, 0.5);
+          strain.set({ volume: 0.1 + 0.4 * r.tension, rate: 0.8 + 0.5 * r.tension });
+        }
         if (r.state.done !== before) {
           if (r.state.done >= COUNT) {
             newPatch();
@@ -135,17 +148,19 @@ export default function ThreadScreen() {
       onPanResponderRelease: () => {
         s.dragging = false;
         continuous.stop();
+        strain.stop();
         setEnd(null);
       },
       onPanResponderTerminate: () => {
         s.dragging = false;
         continuous.stop();
+        strain.stop();
         setEnd(null);
       },
     });
     // anchorFor depends on layout, which panResponder must follow.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s, appear, patchX, patchY, cellW, patchW]);
+  }, [s, appear, patchX, patchY, cellW, patchW, strain]);
 
   const color = PATCH_COLORS[knit.patch % PATCH_COLORS.length];
   const dark = mixColor(color, '#000000', 0.25);

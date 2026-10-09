@@ -19,11 +19,13 @@ Rai Industries' haptic fidget board app for iPhone (Expo SDK 57, React Native, E
 1. Add an entry to `TOYS` in `constants/toys.tsx` (id = route = quick-launch name, category, color, icon).
 2. Create `app/<id>.tsx`; render `<ToyChrome toyId="<id>" />` as the last child of the root view. Put toy-specific settings in its `options` prop, stored with `useToyOption`.
 3. Haptics only through `lib/haptics.ts` (`transient`, `continuous`, `playEvents`, `playHaptic`), so intensity, Discreet and stop-on-leave all apply. Keep a tap fallback for Expo Go.
-4. Put physics and timing in `lib/<id>.ts` with tests; label controls for VoiceOver; respect `useReducedMotion`.
-5. Simple tap toys can set `tapPattern: true` in the registry and wrap their tap in `useTapFeel`.
+4. Give it sounds: one-shots with `sound.play(name, { volume, rate })` next to each haptic, sustained sounds with `useLoop(name, filter)` shaped by `.set({ volume, rate, freq })` and stopped on release. New sounds go in `lib/sound/recipes.ts` (the tests check level, length and loop seams); preview with `npm run sounds -- <name>`.
+5. Put physics and timing in `lib/<id>.ts` with tests; label controls for VoiceOver; respect `useReducedMotion`.
+6. Simple tap toys can set `tapPattern: true` in the registry and wrap their tap in `useTapFeel`.
 
 ## Conventions
 - Fire system taps through `playHaptic()` / `playSequence()` in `lib/haptics.ts`. Anything that should feel continuous (rising tension, a build-up) uses `Rumble` in `lib/rumble.ts`, which plays a Core Haptics swell when `coreHaptics.available` and falls back to accelerating taps otherwise. Every Core Haptics feature must keep a tap fallback, because Expo Go and the web preview lack the native module.
+- Sound runs on `react-native-audio-api` (Web Audio, click-accurate timing) through `lib/sound/engine.ts`, which guards for builds without it (Expo Go is silent). The audio session is `ambient`: it follows the silent switch and mixes with the user's music. Its Expo plugin is configured with `iosBackgroundMode: false`; keep it that way, the app has no background audio. You can't hear sounds, so verify with the tests, `scripts/sounds.ts` (NO_PLAY=1 writes WAVs without playing on the founder's speakers) and spectral checks, and tell the founder what to listen for.
 - Never import `react-native-pulsar` statically; it throws without its native module. Go through `lib/coreHaptics.tsx`, which checks first. Same pattern for `expo-sensors` in `app/shake.tsx` (`requireOptionalNativeModule('ExponentAccelerometer')`), so a JS update never crashes a build made before the native module was added. Any new native library needs the same guard and a note telling the founder to run `npm run build:dev`.
 - iOS accelerometer readings follow Apple's convention (upright at rest: y = -1 g); `beadAcceleration` in `lib/rattle.ts` converts them to screen space.
 - `react-native-reanimated` is pinned to the SDK's version on purpose: expo-router pulls in the newest one otherwise, whose `react-native-worklets` requirement conflicts with Pulsar's and the SDK's.

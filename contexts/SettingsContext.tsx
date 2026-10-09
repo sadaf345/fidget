@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIntensitySettings } from '@/lib/hapticState';
+import { setSoundSettings } from '@/lib/sound/engine';
 import { SavedPattern } from '@/lib/patterns';
 
 export const INTENSITY_MIN = 0.25;
@@ -21,6 +22,12 @@ export interface AppSettings {
   toyOptions: Record<string, Record<string, OptionValue>>;
   /** Toy id -> saved pattern id that replaces its tap haptic. */
   tapPatterns: Record<string, string>;
+  /** Sounds on for every toy (the phone's silent switch and Discreet mode still mute them). */
+  sound: boolean;
+  /** 0..1 */
+  volume: number;
+  /** Toys whose sound is muted on their own. */
+  toySoundMuted: Record<string, boolean>;
 }
 
 const DEFAULTS: AppSettings = {
@@ -30,6 +37,9 @@ const DEFAULTS: AppSettings = {
   favorites: [],
   toyOptions: {},
   tapPatterns: {},
+  sound: true,
+  volume: 0.8,
+  toySoundMuted: {},
 };
 
 const SETTINGS_KEY = 'fidget_settings';
@@ -45,6 +55,9 @@ interface SettingsContextValue {
   toggleFavorite: (toyId: string) => void;
   setToyOption: (toyId: string, key: string, value: OptionValue) => void;
   setTapPattern: (toyId: string, patternId: string | null) => void;
+  setSound: (on: boolean) => void;
+  setVolume: (value: number) => void;
+  setToySoundMuted: (toyId: string, muted: boolean) => void;
   savePattern: (pattern: SavedPattern) => void;
   renamePattern: (id: string, name: string) => void;
   deletePattern: (id: string) => void;
@@ -82,9 +95,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Keep the haptics service in step with the multipliers, and persist after load.
+  // Keep the haptics and sound services in step, and persist after load.
   useEffect(() => {
     setIntensitySettings(settings.globalIntensity, settings.toyIntensity);
+    setSoundSettings({ enabled: settings.sound, volume: settings.volume, discreet: settings.discreet, toyMuted: settings.toySoundMuted });
     if (loaded) AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)).catch(() => {});
   }, [settings, loaded]);
 
@@ -115,6 +129,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       else delete tapPatterns[toyId];
       return { ...s, tapPatterns };
     }),
+    setSound: on => update(s => ({ ...s, sound: on })),
+    setVolume: v => update(s => ({ ...s, volume: v })),
+    setToySoundMuted: (toyId, muted) => update(s => ({ ...s, toySoundMuted: { ...s.toySoundMuted, [toyId]: muted } })),
     savePattern: p => setPatterns(prev => [p, ...prev]),
     renamePattern: (id, name) => setPatterns(prev => prev.map(p => (p.id === id ? { ...p, name } : p))),
     deletePattern: id => {
