@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, StatusBar, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { playHaptic } from '@/lib/haptics';
@@ -43,8 +44,8 @@ export default function SpinScreen() {
   }).current;
 
   const bestMax = best.max;
-  useEffect(() => {
-    // Refresh the readout a few times a second rather than every frame.
+  // While on screen: refresh the readout a few times a second. Leaving stops the coast and its whir.
+  useFocusEffect(useCallback(() => {
     const timer = setInterval(() => {
       const current = toRpm(s.velocity);
       setRpm(current);
@@ -53,9 +54,11 @@ export default function SpinScreen() {
     return () => {
       clearInterval(timer);
       s.cancel?.();
+      s.cancel = null;
+      s.velocity = 0;
       coreHaptics.stop();
     };
-  }, [s, bestMax]);
+  }, [s, bestMax]));
 
   const panResponder = useMemo(() => {
     const setAngle = (deg: number, velocity: number) => {

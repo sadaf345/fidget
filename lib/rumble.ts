@@ -1,6 +1,7 @@
 import { HapticPower } from '@/types/fidget';
 import { playHaptic } from '@/lib/haptics';
 import { coreHaptics } from '@/lib/coreHaptics';
+import { isQuiet } from '@/lib/hapticState';
 
 /*
  * A vibration that rises and falls with an intensity (0..1). Everything that should feel
@@ -81,6 +82,11 @@ export class Rumble {
   }
 
   private loop = () => {
+    // A toy just closed: this rumble belongs to a screen that's on its way out.
+    if (isQuiet()) {
+      this.stop();
+      return;
+    }
     const now = Date.now();
     if (this.fading) {
       const t = (now - this.fading.start) / this.fading.duration;

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, StatusBar, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, Ellipse, G, Line, Path } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { continuous } from '@/lib/haptics';
@@ -20,9 +21,12 @@ export default function CatScreen() {
   const breathe = useRef(new Animated.Value(0)).current;
   const s = useRef({ frame: null as number | null, began: 0, releasedAt: 0, level: 0 }).current;
 
-  useEffect(() => () => {
+  // Leaving stops the loop and its vibration, even mid-hold or mid-fade.
+  useFocusEffect(useCallback(() => () => {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
-  }, [s]);
+    s.frame = null;
+    continuous.stop();
+  }, [s]));
 
   const run = () => {
     const tick = () => {

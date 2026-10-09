@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import type { RealtimeComposer } from 'react-native-pulsar';
-import { onStopAll, scaled } from '@/lib/hapticState';
+import { isQuiet, onStopAll, scaled } from '@/lib/hapticState';
 
 /*
  * Core Haptics: continuous vibration with live strength (amplitude) and sharpness (frequency),
@@ -50,7 +50,7 @@ export const coreHaptics = {
    * Cheap to call every frame; tiny changes are skipped.
    */
   set(amplitude: number, frequency: number): void {
-    if (!composer) return;
+    if (!composer || isQuiet()) return;
     const a = scaled(amplitude);
     const f = clamp01(frequency);
     if (Math.abs(a - lastAmplitude) < 0.01 && Math.abs(f - lastFrequency) < 0.01) return;
@@ -60,8 +60,9 @@ export const coreHaptics = {
   },
 
   stop(): void {
-    // Skip when nothing continuous is playing; callers stop freely every frame.
-    if (!composer || lastAmplitude < 0) return;
+    // Always pass the stop through (the native side ignores it when idle), so a stop can
+    // never be skipped because our bookkeeping disagrees with the player.
+    if (!composer) return;
     lastAmplitude = -1;
     lastFrequency = -1;
     composer.stop();

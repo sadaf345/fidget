@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, StatusBar, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { theme } from '@/constants/colors';
 import { continuous, transient } from '@/lib/haptics';
 import { breathIntensity, breathSize, PATTERNS, phaseAt, PhaseKind } from '@/lib/breathe';
@@ -37,9 +38,11 @@ export default function BreatheScreen() {
     if (completed) transient(0.4, 0.2);
   }, [s, size]);
 
-  useEffect(() => () => {
-    if (s.frame !== null) cancelAnimationFrame(s.frame);
-  }, [s]);
+  // Leaving ends the session: the loop and its vibration must not outlive the screen.
+  useFocusEffect(useCallback(() => () => {
+    if (s.frame !== null) stop(false);
+    else continuous.stop();
+  }, [s, stop]));
 
   const start = () => {
     const phases = PATTERNS[pattern];

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { HapticPower } from '@/types/fidget';
 import { coreHaptics } from '@/lib/coreHaptics';
-import { clamp01, intensityScale, onStopAll, scaled } from '@/lib/hapticState';
+import { clamp01, intensityScale, isQuiet, onStopAll, scaled } from '@/lib/hapticState';
 
 /*
  * The app's one haptics service. Every toy goes through it, so the intensity settings,
@@ -111,7 +111,8 @@ const fallbackLoop = {
   lastTap: 0,
   timer: null as ReturnType<typeof setTimeout> | null,
   tick() {
-    if (fallbackLoop.intensity <= 0.02) {
+    if (fallbackLoop.intensity <= 0.02 || isQuiet()) {
+      fallbackLoop.intensity = 0;
       fallbackLoop.timer = null;
       return;
     }
@@ -127,6 +128,7 @@ const fallbackLoop = {
 /** A sustained vibration you keep updating (every touch move is fine) until stop(). */
 export const continuous = {
   set(intensity: number, sharpness: number): void {
+    if (isQuiet()) return;
     if (coreHaptics.available) {
       coreHaptics.set(intensity, sharpness);
       return;

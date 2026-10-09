@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import { theme } from '@/constants/colors';
 import { continuous, playEvents } from '@/lib/haptics';
@@ -16,9 +17,12 @@ export default function StressBallScreen() {
   const squeeze = useRef(new Animated.Value(0)).current;
   const s = useRef({ frame: null as number | null, began: 0 }).current;
 
-  useEffect(() => () => {
+  // Leaving stops the loop and its vibration, even mid-hold or mid-fade.
+  useFocusEffect(useCallback(() => () => {
     if (s.frame !== null) cancelAnimationFrame(s.frame);
-  }, [s]);
+    s.frame = null;
+    continuous.stop();
+  }, [s]));
 
   const press = () => {
     s.began = Date.now();
