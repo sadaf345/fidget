@@ -6,6 +6,7 @@ Rai Industries' haptic fidget board app for iPhone (Expo SDK 57, React Native, E
 - `npm run check`: typecheck + lint + jest. Run before declaring any change done.
 - `CI=1 npx expo export --platform ios --output-dir <scratch dir>`: proves the iOS JS bundle compiles. Use it after dependency or import changes.
 - `npx expo-doctor`: dependency/SDK alignment.
+- `node scripts/icon.mjs`: redraws the app icon (a teal pop-it sheet peeling at the corner) and re-exports every image `app.json` uses. The icon is code; edit it there, not in the PNGs. Needs `npm i --no-save playwright-core`. Icon and splash changes only reach the phone with a new native build.
 - `npx expo install <pkg>`: always use this, not plain `npm install`, for anything with native code, so versions match the SDK.
 
 ## How we test

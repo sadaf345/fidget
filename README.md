@@ -95,6 +95,7 @@ lib/                    Pure logic, unit-tested in lib/__tests__/
   motion.ts             Accelerometer (guarded for builds without it)
   charge pick pop peel thread scratch slime squish zipper spin rattle snow breathe glass patterns board links
 scripts/screenshot.mjs  Screenshot the web preview at phone size
+scripts/icon.mjs        Draws the app icon and exports icon, splash, Android and favicon PNGs
 ```
 
 Data is stored on-device only (AsyncStorage). The storage keys are the same ones the original build used, so existing boards keep working.
